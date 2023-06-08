@@ -1,7 +1,7 @@
 (define (domain moving-labyrinth)
 (:requirements :typing :adl :equality :action-costs :fluents)
 (:types
-    ;; card consisting of 4 sectors 
+    ;; card consisting of 4 sectors
     ;; NW | NE
     ;;--------
     ;; SW | SE
@@ -33,7 +33,7 @@
     (robot-at-card ?c - card)
     ;; robot is located in sector ?d1 ?d2
     (robot-at-cell ?d1 - directionV ?d2 - directionH)
-    ;; card ?c is positioned in the grid at ?p1 ?p2 
+    ;; card ?c is positioned in the grid at ?p1 ?p2
     (card-at ?c - card ?p1 - gridpos ?p2 - gridpos)
     ;; flag to indicate that a card is currently moving and the robot cannot move
     (cards-moving)
@@ -44,7 +44,7 @@
     (cards-moving-north)
     ;; the card whose position needs to be updated next while rotating
     (next-moving-card ?c - card)
-    ;; the card that was removed to rotate and which needs to be placed at the beginning/end of the row/column 
+    ;; the card that was removed to rotate and which needs to be placed at the beginning/end of the row/column
     (new-headtail-card ?c - card)
     ;; flag indicating that the robot left the maze e.i. that the goal has been reached
     (left)
@@ -57,23 +57,64 @@
     (move-card) - number
 )
 
-;; moves the robot between to cards: ?cfrom (NW) -> ?cto (NE) or ?cfrom (SW) -> ?cto (SE)
-(:action move-between-cards-west
-    :parameters ( ?cfrom - card ?p1from - gridpos ?p2from - gridpos ?d1from - directionV ?d2from - directionH ?cto - card ?p1to - gridpos ?p2to - gridpos ?d1to - directionV ?d2to - directionH)
+;; Moves the robot between two different cards.
+;; The robot moves from
+;;    the sector (?d1from ?d2from) on the card ?cfrom located at (?p1from ?p2from)
+;; to
+;;    the sector (?d1to ?d2to) on the card ?cto located at (?p1to ?p2to)
+;; Note that movement between cards can never be blocked they just need to be
+;; aligned next to each other.
+(:action move-between-cards
+    :parameters (?cfrom - card ?p1from - gridpos ?p2from - gridpos
+                 ?d1from - directionV ?d2from - directionH
+                 ?cto - card ?p1to - gridpos ?p2to - gridpos
+                 ?d1to - directionV ?d2to - directionH)
     :precondition
         (and
             (not (cards-moving))
-            (= ?d2from w)
-            (robot-at-card ?cfrom)
-            (robot-at-cell ?d1from ?d2from)
             (card-at ?cfrom ?p1from ?p2from)
             (card-at ?cto ?p1to ?p2to)
-            (next ?p2from ?p2to)
-            (= ?p1from ?p1to)
-            (= ?d1from ?d1to)
-            (not (= ?d2from ?d2to))
-            (not (= ?d1to ?d2to))
+            (robot-at-card ?cfrom)
+            (robot-at-cell ?d1from ?d2from)
+
+            (or
+                ;; (NW) to (NE) or (SW) to (SE)
+                (and (= ?d2from W)
+                     (next ?p2from ?p2to)
+                     (= ?p1from ?p1to)
+                     (= ?d1from ?d1to)
+                     (not (= ?d2from ?d2to))
+                     (not (= ?d1to ?d2to)))
+
+                ;; (NE) to (NW) or (SE) to (SW)
+                (and (= ?d2from E)
+                     (next ?p2to ?p2from)
+                     (= ?p1from ?p1to)
+                     (= ?d1from ?d1to)
+                     (not (= ?d2from ?d2to))
+                     (not (= ?d1to ?d2to))
+                )
+
+                ;; (NW) to (SW) or (NE) to (SE)
+                (and (= ?d1from N)
+                     (next ?p1from ?p1to)
+                     (= ?p2from ?p2to)
+                     (= ?d2from ?d2to)
+                     (not (= ?d1from ?d1to))
+                     (not (= ?d1to ?d2to))
+                )
+
+                ;; (SW) to (NW) or (SE) to (NE)
+                (and (= ?d1from S)
+                     (next ?p1to ?p1from)
+                     (= ?p2from ?p2to)
+                     (= ?d2from ?d2to)
+                     (not (= ?d1from ?d1to))
+                     (not (= ?d1to ?d2to))
+                )
+            )
         )
+
     :effect
         (and
             (not (robot-at-card ?cfrom))
@@ -84,99 +125,133 @@
         )
 )
 
-;; moves the robot between to cards: ?cfrom (NE) -> ?cto (NW) or ?cfrom (SE) -> ?cto (SW)
-(:action move-between-cards-est
-    :parameters ( ?cfrom - card ?p1from - gridpos ?p2from - gridpos ?d1from - directionV ?d2from - directionH ?cto - card ?p1to - gridpos ?p2to - gridpos ?d1to - directionV ?d2to - directionH)
-    :precondition
-        (and
-            (not (cards-moving))
-            (= ?d2from e)
-            (robot-at-card ?cfrom)
-            (robot-at-cell ?d1from ?d2from)
-            (card-at ?cfrom ?p1from ?p2from)
-            (card-at ?cto ?p1to ?p2to)
-            (next ?p2to ?p2from)
-            (= ?p1from ?p1to)
-            (= ?d1from ?d1to)
-            (not (= ?d2from ?d2to))
-            (not (= ?d1to ?d2to))
-        )
-    :effect
-        (and
-            (not (robot-at-card ?cfrom))
-            (not (robot-at-cell ?d1from ?d2from))
-            (robot-at-card ?cto)
-            (robot-at-cell ?d1to ?d2to)
-            (increase (total-cost) (between-cards-cost))
-        )
-)
+;; ;; moves the robot between two cards: ?cfrom (NW) -> ?cto (NE) or ?cfrom (SW) -> ?cto (SE)
+;; (:action move-between-cards-west
+;;     :parameters ( ?cfrom - card ?p1from - gridpos ?p2from - gridpos ?d1from - directionV ?d2from - directionH ?cto - card ?p1to - gridpos ?p2to - gridpos ?d1to - directionV ?d2to - directionH)
+;;     :precondition
+;;         (and
+;;             (not (cards-moving))
+;;             (= ?d2from w)
+;;             (robot-at-card ?cfrom)
+;;             (robot-at-cell ?d1from ?d2from)
+;;             (card-at ?cfrom ?p1from ?p2from)
+;;             (card-at ?cto ?p1to ?p2to)
+;;             (next ?p2from ?p2to)
+;;             (= ?p1from ?p1to)
+;;             (= ?d1from ?d1to)
+;;             (not (= ?d2from ?d2to))
+;;             (not (= ?d1to ?d2to))
+;;         )
+;;     :effect
+;;         (and
+;;             (not (robot-at-card ?cfrom))
+;;             (not (robot-at-cell ?d1from ?d2from))
+;;             (robot-at-card ?cto)
+;;             (robot-at-cell ?d1to ?d2to)
+;;             (increase (total-cost) (between-cards-cost))
+;;         )
+;; )
+;;
+;; ;; moves the robot between two cards: ?cfrom (NE) -> ?cto (NW) or ?cfrom (SE) -> ?cto (SW)
+;; (:action move-between-cards-east
+;;     :parameters ( ?cfrom - card ?p1from - gridpos ?p2from - gridpos ?d1from - directionV ?d2from - directionH ?cto - card ?p1to - gridpos ?p2to - gridpos ?d1to - directionV ?d2to - directionH)
+;;     :precondition
+;;         (and
+;;             (not (cards-moving))
+;;             (= ?d2from e)
+;;             (robot-at-card ?cfrom)
+;;             (robot-at-cell ?d1from ?d2from)
+;;             (card-at ?cfrom ?p1from ?p2from)
+;;             (card-at ?cto ?p1to ?p2to)
+;;             (next ?p2to ?p2from)
+;;             (= ?p1from ?p1to)
+;;             (= ?d1from ?d1to)
+;;             (not (= ?d2from ?d2to))
+;;             (not (= ?d1to ?d2to))
+;;         )
+;;     :effect
+;;         (and
+;;             (not (robot-at-card ?cfrom))
+;;             (not (robot-at-cell ?d1from ?d2from))
+;;             (robot-at-card ?cto)
+;;             (robot-at-cell ?d1to ?d2to)
+;;             (increase (total-cost) (between-cards-cost))
+;;         )
+;; )
+;;
+;; ;; moves the robot between to cards: ?cfrom (NW) -> ?cto (SW) or ?cfrom (NE) -> ?cto (SE)
+;; (:action move-between-cards-north
+;;     :parameters ( ?cfrom - card ?p1from - gridpos ?p2from - gridpos ?d1from - directionV ?d2from - directionH ?cto - card ?p1to - gridpos ?p2to - gridpos ?d1to - directionV ?d2to - directionH)
+;;     :precondition
+;;         (and
+;;             (not (cards-moving))
+;;             (= ?d1from n)
+;;             (robot-at-card ?cfrom)
+;;             (robot-at-cell ?d1from ?d2from)
+;;             (card-at ?cfrom ?p1from ?p2from)
+;;             (card-at ?cto ?p1to ?p2to)
+;;             (next ?p1from ?p1to)
+;;             (= ?p2from ?p2to)
+;;             (= ?d2from ?d2to)
+;;             (not (= ?d1from ?d1to))
+;;             (not (= ?d1to ?d2to))
+;;         )
+;;     :effect
+;;         (and
+;;             (not (robot-at-card ?cfrom))
+;;             (not (robot-at-cell ?d1from ?d2from))
+;;             (robot-at-card ?cto)
+;;             (robot-at-cell ?d1to ?d2to)
+;;             (increase (total-cost) (between-cards-cost))
+;;         )
+;; )
+;;
+;; ;; moves the robot between to cards: ?cfrom (SW) -> ?cto (NW) or ?cfrom (SE) -> ?cto (NE)
+;; (:action move-between-cards-south
+;;     :parameters ( ?cfrom - card ?p1from - gridpos ?p2from - gridpos ?d1from - directionV ?d2from - directionH ?cto - card ?p1to - gridpos ?p2to - gridpos ?d1to - directionV ?d2to - directionH)
+;;     :precondition
+;;         (and
+;;             (not (cards-moving))
+;;             (= ?d1from s)
+;;             (robot-at-card ?cfrom)
+;;             (robot-at-cell ?d1from ?d2from)
+;;             (card-at ?cfrom ?p1from ?p2from)
+;;             (card-at ?cto ?p1to ?p2to)
+;;             (next ?p1to ?p1from)
+;;             (= ?p2from ?p2to)
+;;             (= ?d2from ?d2to)
+;;             (not (= ?d1from ?d1to))
+;;             (not (= ?d1to ?d2to))
+;;         )
+;;     :effect
+;;         (and
+;;             (not (robot-at-card ?cfrom))
+;;             (not (robot-at-cell ?d1from ?d2from))
+;;             (robot-at-card ?cto)
+;;             (robot-at-cell ?d1to ?d2to)
+;;             (increase (total-cost) (between-cards-cost))
+;;         )
+;; )
 
-;; moves the robot between to cards: ?cfrom (NW) -> ?cto (SW) or ?cfrom (NE) -> ?cto (SE)
-(:action move-between-cards-north
-    :parameters ( ?cfrom - card ?p1from - gridpos ?p2from - gridpos ?d1from - directionV ?d2from - directionH ?cto - card ?p1to - gridpos ?p2to - gridpos ?d1to - directionV ?d2to - directionH)
-    :precondition
-        (and
-            (not (cards-moving))
-            (= ?d1from n)
-            (robot-at-card ?cfrom)
-            (robot-at-cell ?d1from ?d2from)
-            (card-at ?cfrom ?p1from ?p2from)
-            (card-at ?cto ?p1to ?p2to)
-            (next ?p1from ?p1to)
-            (= ?p2from ?p2to)
-            (= ?d2from ?d2to)
-            (not (= ?d1from ?d1to))
-            (not (= ?d1to ?d2to))
-        )
-    :effect
-        (and
-            (not (robot-at-card ?cfrom))
-            (not (robot-at-cell ?d1from ?d2from))
-            (robot-at-card ?cto)
-            (robot-at-cell ?d1to ?d2to)
-            (increase (total-cost) (between-cards-cost))
-        )
-)
-
-;; moves the robot between to cards: ?cfrom (SW) -> ?cto (NW) or ?cfrom (SE) -> ?cto (NE)
-(:action move-between-cards-south
-    :parameters ( ?cfrom - card ?p1from - gridpos ?p2from - gridpos ?d1from - directionV ?d2from - directionH ?cto - card ?p1to - gridpos ?p2to - gridpos ?d1to - directionV ?d2to - directionH)
-    :precondition
-        (and
-            (not (cards-moving))
-            (= ?d1from s)
-            (robot-at-card ?cfrom)
-            (robot-at-cell ?d1from ?d2from)
-            (card-at ?cfrom ?p1from ?p2from)
-            (card-at ?cto ?p1to ?p2to)
-            (next ?p1to ?p1from)
-            (= ?p2from ?p2to)
-            (= ?d2from ?d2to)
-            (not (= ?d1from ?d1to))
-            (not (= ?d1to ?d2to))
-        )
-    :effect
-        (and
-            (not (robot-at-card ?cfrom))
-            (not (robot-at-cell ?d1from ?d2from))
-            (robot-at-card ?cto)
-            (robot-at-cell ?d1to ?d2to)
-            (increase (total-cost) (between-cards-cost))
-        )
-)
-
-;; moves the robot horizontally within a card 
-;; this is only possible if there is no wall between the sectors (blocked)
-(:action move-inside-cards-h
-    :parameters ( ?c - card ?d1from - directionV ?d2from - directionH ?d1to - directionV ?d2to - directionH)
+;; Move between the sectors inside the card ?c
+(:action move-inside-card
+    :parameters (?c - card
+                 ?d1from - directionV ?d2from - directionH
+                 ?d1to - directionV ?d2to - directionH)
     :precondition
         (and
             (not (cards-moving))
             (robot-at-card ?c)
             (robot-at-cell ?d1from ?d2from)
-            (= ?d1from ?d1to)
-            (not (= ?d1to ?d2to))
             (not (blocked ?c ?d1from ?d2from ?d1to ?d2to))
+            (or
+                (and (= ?d1from ?d1to)
+                     (not (= ?d2from ?d2to))
+                )
+                (and (= ?d2from ?d2to)
+                     (not (= ?d1from ?d1to))
+                )
+            )
         )
     :effect
         (and
@@ -186,26 +261,47 @@
         )
 )
 
-;; moves the robot vertically within a card 
-;; this is only possible if there is no wall between the sectors (blocked)
-(:action move-inside-cards-v
-    :parameters ( ?c - card ?d1from - directionV ?d2from - directionH ?d1to - directionV ?d2to - directionH)
-    :precondition
-        (and
-            (not (cards-moving))
-            (robot-at-card ?c)
-            (robot-at-cell ?d1from ?d2from)
-            (= ?d2from ?d2to)
-            (not (= ?d1to ?d2to))
-            (not (blocked ?c ?d1from ?d2from ?d1to ?d2to))
-        )
-    :effect
-        (and
-            (not (robot-at-cell ?d1from ?d2from))
-            (robot-at-cell ?d1to ?d2to)
-            (increase (total-cost) (inside-cards-cost))
-        )
-)
+;; ;; moves the robot horizontally within a card
+;; ;; this is only possible if there is no wall between the sectors (blocked)
+;; (:action move-inside-cards-h
+;;     :parameters ( ?c - card ?d1from - directionV ?d2from - directionH ?d1to - directionV ?d2to - directionH)
+;;     :precondition
+;;         (and
+;;             (not (cards-moving))
+;;             (robot-at-card ?c)
+;;             (robot-at-cell ?d1from ?d2from)
+;;             (= ?d1from ?d1to)
+;;             (not (= ?d1to ?d2to))
+;;             (not (blocked ?c ?d1from ?d2from ?d1to ?d2to))
+;;         )
+;;     :effect
+;;         (and
+;;             (not (robot-at-cell ?d1from ?d2from))
+;;             (robot-at-cell ?d1to ?d2to)
+;;             (increase (total-cost) (inside-cards-cost))
+;;         )
+;; )
+;;
+;; ;; moves the robot vertically within a card
+;; ;; this is only possible if there is no wall between the sectors (blocked)
+;; (:action move-inside-cards-v
+;;     :parameters ( ?c - card ?d1from - directionV ?d2from - directionH ?d1to - directionV ?d2to - directionH)
+;;     :precondition
+;;         (and
+;;             (not (cards-moving))
+;;             (robot-at-card ?c)
+;;             (robot-at-cell ?d1from ?d2from)
+;;             (= ?d2from ?d2to)
+;;             (not (= ?d1to ?d2to))
+;;             (not (blocked ?c ?d1from ?d2from ?d1to ?d2to))
+;;         )
+;;     :effect
+;;         (and
+;;             (not (robot-at-cell ?d1from ?d2from))
+;;             (robot-at-cell ?d1to ?d2to)
+;;             (increase (total-cost) (inside-cards-cost))
+;;         )
+;; )
 
 
 ;; there 3 (start, move, stop) for each direction to rotate the cards
@@ -217,7 +313,7 @@
 ;; determines which card should be updated next the corresponding move action
 ;; and makes all other actions inapplicable by setting cards-moving and cards-moving-west
 (:action start-move-card-row-west
-:parameters(?cm - card ?rowindex - gridpos ?pcolumn - gridpos ?cnext - card ?nextcolumn - gridpos) 
+:parameters(?cm - card ?rowindex - gridpos ?pcolumn - gridpos ?cnext - card ?nextcolumn - gridpos)
 :precondition
     (and
         (not (cards-moving))
@@ -241,7 +337,7 @@
 
 ;; updates the grid column index of ?cm which is the next card to update
 (:action move-card-row-west
-:parameters(?cm - card ?rowindex - gridpos ?pcolumn - gridpos ?cnext - card ?nextcolumn - gridpos ?prevcolumn - gridpos) 
+:parameters(?cm - card ?rowindex - gridpos ?pcolumn - gridpos ?cnext - card ?nextcolumn - gridpos ?prevcolumn - gridpos)
 :precondition
     (and
         (cards-moving)
@@ -267,7 +363,7 @@
 ;; stops rotation
 ;; updates the grid index of the card specified by the start move action in new-headtail-card
 (:action stop-move-card-row-west
-:parameters(?cm - card ?rowindex - gridpos ?pcolumn - gridpos ?prevcolumn - gridpos ?max - gridpos ?newtc - card) 
+:parameters(?cm - card ?rowindex - gridpos ?pcolumn - gridpos ?prevcolumn - gridpos ?max - gridpos ?newtc - card)
 :precondition
     (and
         (cards-moving)
@@ -296,7 +392,7 @@
 ;; ----------------------------------------------------------------------------------------
 
 (:action start-move-card-row-east
-:parameters(?cm - card ?rowindex - gridpos ?pcolumn - gridpos ?cnext - card ?nextcolumn - gridpos) 
+:parameters(?cm - card ?rowindex - gridpos ?pcolumn - gridpos ?cnext - card ?nextcolumn - gridpos)
 :precondition
     (and
         (not (cards-moving))
@@ -319,7 +415,7 @@
 )
 
 (:action move-card-row-east
-:parameters(?cm - card ?rowindex - gridpos ?pcolumn - gridpos ?cnext - card ?nextcolumn - gridpos ?prevcolumn - gridpos) 
+:parameters(?cm - card ?rowindex - gridpos ?pcolumn - gridpos ?cnext - card ?nextcolumn - gridpos ?prevcolumn - gridpos)
 :precondition
     (and
         (cards-moving)
@@ -343,7 +439,7 @@
 )
 
 (:action stop-move-card-row-east
-:parameters(?cm - card ?rowindex - gridpos ?pcolumn - gridpos ?prevcolumn - gridpos ?min - gridpos ?newtc - card) 
+:parameters(?cm - card ?rowindex - gridpos ?pcolumn - gridpos ?prevcolumn - gridpos ?min - gridpos ?newtc - card)
 :precondition
     (and
         (cards-moving)
@@ -371,7 +467,7 @@
 ;; ----------------------------------------------------------------------------------------
 
 (:action start-move-card-column-north
-:parameters(?cm - card ?prow - gridpos ?columnindex - gridpos  ?cnext - card ?nextrow - gridpos) 
+:parameters(?cm - card ?prow - gridpos ?columnindex - gridpos  ?cnext - card ?nextrow - gridpos)
 :precondition
     (and
         (not (cards-moving))
@@ -394,7 +490,7 @@
 )
 
 (:action move-card-column-north
-:parameters(?cm - card ?prow - gridpos ?columnindex - gridpos  ?cnext - card ?nextrow - gridpos ?prerow - gridpos) 
+:parameters(?cm - card ?prow - gridpos ?columnindex - gridpos  ?cnext - card ?nextrow - gridpos ?prerow - gridpos)
 :precondition
     (and
         (cards-moving)
@@ -418,7 +514,7 @@
 )
 
 (:action stop-move-card-column-north
-:parameters(?cm - card ?prow - gridpos ?columnindex - gridpos ?prerow - gridpos ?max - gridpos ?newtc - card) 
+:parameters(?cm - card ?prow - gridpos ?columnindex - gridpos ?prerow - gridpos ?max - gridpos ?newtc - card)
 :precondition
     (and
         (cards-moving)
@@ -446,7 +542,7 @@
 ;; ----------------------------------------------------------------------------------------
 
 (:action start-move-card-column-south
-:parameters(?cm - card ?prow - gridpos ?columnindex - gridpos  ?cnext - card ?nextrow - gridpos) 
+:parameters(?cm - card ?prow - gridpos ?columnindex - gridpos  ?cnext - card ?nextrow - gridpos)
 :precondition
     (and
         (not (cards-moving))
@@ -469,7 +565,7 @@
 )
 
 (:action move-card-column-south
-:parameters(?cm - card ?prow - gridpos ?columnindex - gridpos  ?cnext - card ?nextrow - gridpos ?prerow - gridpos) 
+:parameters(?cm - card ?prow - gridpos ?columnindex - gridpos  ?cnext - card ?nextrow - gridpos ?prerow - gridpos)
 :precondition
     (and
         (cards-moving)
@@ -493,7 +589,7 @@
 )
 
 (:action stop-move-card-column-south
-:parameters(?cm - card ?prow - gridpos ?columnindex - gridpos ?prerow - gridpos ?min - gridpos ?newtc - card) 
+:parameters(?cm - card ?prow - gridpos ?columnindex - gridpos ?prerow - gridpos ?min - gridpos ?newtc - card)
 :precondition
     (and
         (cards-moving)
@@ -520,11 +616,12 @@
 
 ;; ----------------------------------------------------------------------------------------
 
+;; TODO: Replace this with a goal (goal-at gridpos/sector)?
 ;; checks whether the robot can leave the labyrinth i.e
 ;; whether the card the robot is currently on is in the bottom right corner
 ;; and the rover is in sector SE
 (:action leave
-:parameters(?c - card ?prow - gridpos ?pcolumn - gridpos) 
+:parameters(?c - card ?prow - gridpos ?pcolumn - gridpos)
 :precondition
     (and
         (not (cards-moving))
