@@ -4,8 +4,6 @@
 (:objects
     pos0 pos1 pos2 - gridpos
     card1 card2 card3 card4 card5 card6 card7 card8 card9 - card
-    S N - directionV
-    W E - directionH
 )
 
 (:init
