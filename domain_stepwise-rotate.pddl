@@ -1,4 +1,4 @@
-(define (domain moving-labyrinth)
+(define (domain labyrinth)
 (:requirements :typing :adl :equality :action-costs :fluents)
 (:types
     ;; card consisting of 4 sectors
@@ -11,7 +11,7 @@
     directionV - direction
     ;; horizontal directions: W E
     directionH - direction
-    ;; values for positions of the card in the grid
+    ;; coordinates for positions of the card in the grid
     gridpos - object
 )
 

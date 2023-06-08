@@ -1,5 +1,5 @@
 (define (problem test)
-(:domain moving-labyrinth)
+(:domain labyrinth)
 
 (:objects
     pos0 pos1 pos2 - gridpos
