@@ -1,5 +1,87 @@
+#!/usr/bin/env python3
+
+import sys
+
+def moveCardAction(direction, grid_size):
+    if direction == 'north':
+        fixcoord = 'p2'
+        freecoord = 'p1'
+    elif direction == 'south':
+        fixcoord = 'p2'
+        freecoord = 'p1'
+    elif direction == 'east':
+        fixcoord = 'p1'
+        freecoord = 'p2'
+    elif direction == 'west':
+        fixcoord = 'p1'
+        freecoord = 'p2'
+
+    params = [f'?{fixcoord} - gridpos']
+    for i in range(1, grid_size + 1):
+        params += [f'?card{i} - card']
+        params += [f'?card{i}-{freecoord} - gridpos']
+
+    prevail = []
+    prevail += [f'(min-pos ?card1-{freecoord})']
+    prevail += [f'(max-pos ?card{grid_size}-{freecoord})']
+    for i in range(1, grid_size):
+        prevail += [f'(next ?card{i + 1}-{freecoord} ?card{i}-{freecoord})']
+
+    for i in range(1, grid_size + 1):
+        prevail += [f'(not (robot-at-card ?card{i}))']
+
+    pre = []
+    for i in range(1, grid_size + 1):
+        if fixcoord == 'p1':
+            pos = f'?p1 ?card{i}-p2'
+        else:
+            pos = f'?card{i}-p1 ?p2'
+        pre += [f'(card-at ?card{i} {pos})']
+
+    eff = [f'(not {x})' for x in pre]
+    for i in range(1, grid_size + 1):
+        if direction in ['south', 'east']:
+            n = i + 1
+        else:
+            n = i - 1
+        if n > grid_size:
+            n = 1
+        elif n < 1:
+            n = grid_size
+
+        if fixcoord == 'p1':
+            pos = f'?p1 ?card{n}-p2'
+        else:
+            pos = f'?card{n}-p1 ?p2'
+        eff += [f'(card-at ?card{i} {pos})']
+
+
+
+    params = ' '.join(params)
+    pre = '\n            '.join(prevail + pre)
+    eff = '\n            '.join(eff)
+
+    s = f'''
+(:action move-card-{direction}-{grid_size}
+    :parameters ({params})
+    :precondition
+        (and
+            {pre}
+        )
+    :effect
+        (and
+            {eff}
+            (increase (total-cost) (move-card))
+        )
+)
+'''
+    return s
+
+def genDomain(additional_predicates, move_cards):
+    s = f'''
 (define (domain labyrinth)
 (:requirements :adl :action-costs :fluents)
+
 (:types
     ;; card consisting of 4 sectors
     ;; NW | NE
@@ -36,16 +118,9 @@
     ;; card ?c is positioned in the grid at ?p1 ?p2
     (card-at ?c - card ?p1 - gridpos ?p2 - gridpos)
     ;; flag to indicate that a card is currently moving and the robot cannot move
+    ;; this is used only for stepwise rotation of cards
     (cards-moving)
-    ;; flags to indicate that a row/column is rotating in the corresponding direction
-    (cards-moving-west)
-    (cards-moving-east)
-    (cards-moving-south)
-    (cards-moving-north)
-    ;; the card whose position needs to be updated next while rotating
-    (next-moving-card ?c - card)
-    ;; the card that was removed to rotate and which needs to be placed at the beginning/end of the row/column
-    (new-headtail-card ?c - card)
+    {additional_predicates}
     ;; flag indicating that the robot left the maze e.i. that the goal has been reached
     (left)
 )
@@ -125,115 +200,7 @@
         )
 )
 
-;; ;; moves the robot between two cards: ?cfrom (NW) -> ?cto (NE) or ?cfrom (SW) -> ?cto (SE)
-;; (:action move-between-cards-west
-;;     :parameters ( ?cfrom - card ?p1from - gridpos ?p2from - gridpos ?d1from - directionV ?d2from - directionH ?cto - card ?p1to - gridpos ?p2to - gridpos ?d1to - directionV ?d2to - directionH)
-;;     :precondition
-;;         (and
-;;             (not (cards-moving))
-;;             (= ?d2from w)
-;;             (robot-at-card ?cfrom)
-;;             (robot-at-cell ?d1from ?d2from)
-;;             (card-at ?cfrom ?p1from ?p2from)
-;;             (card-at ?cto ?p1to ?p2to)
-;;             (next ?p2from ?p2to)
-;;             (= ?p1from ?p1to)
-;;             (= ?d1from ?d1to)
-;;             (not (= ?d2from ?d2to))
-;;             (not (= ?d1to ?d2to))
-;;         )
-;;     :effect
-;;         (and
-;;             (not (robot-at-card ?cfrom))
-;;             (not (robot-at-cell ?d1from ?d2from))
-;;             (robot-at-card ?cto)
-;;             (robot-at-cell ?d1to ?d2to)
-;;             (increase (total-cost) (between-cards-cost))
-;;         )
-;; )
-;;
-;; ;; moves the robot between two cards: ?cfrom (NE) -> ?cto (NW) or ?cfrom (SE) -> ?cto (SW)
-;; (:action move-between-cards-east
-;;     :parameters ( ?cfrom - card ?p1from - gridpos ?p2from - gridpos ?d1from - directionV ?d2from - directionH ?cto - card ?p1to - gridpos ?p2to - gridpos ?d1to - directionV ?d2to - directionH)
-;;     :precondition
-;;         (and
-;;             (not (cards-moving))
-;;             (= ?d2from e)
-;;             (robot-at-card ?cfrom)
-;;             (robot-at-cell ?d1from ?d2from)
-;;             (card-at ?cfrom ?p1from ?p2from)
-;;             (card-at ?cto ?p1to ?p2to)
-;;             (next ?p2to ?p2from)
-;;             (= ?p1from ?p1to)
-;;             (= ?d1from ?d1to)
-;;             (not (= ?d2from ?d2to))
-;;             (not (= ?d1to ?d2to))
-;;         )
-;;     :effect
-;;         (and
-;;             (not (robot-at-card ?cfrom))
-;;             (not (robot-at-cell ?d1from ?d2from))
-;;             (robot-at-card ?cto)
-;;             (robot-at-cell ?d1to ?d2to)
-;;             (increase (total-cost) (between-cards-cost))
-;;         )
-;; )
-;;
-;; ;; moves the robot between to cards: ?cfrom (NW) -> ?cto (SW) or ?cfrom (NE) -> ?cto (SE)
-;; (:action move-between-cards-north
-;;     :parameters ( ?cfrom - card ?p1from - gridpos ?p2from - gridpos ?d1from - directionV ?d2from - directionH ?cto - card ?p1to - gridpos ?p2to - gridpos ?d1to - directionV ?d2to - directionH)
-;;     :precondition
-;;         (and
-;;             (not (cards-moving))
-;;             (= ?d1from n)
-;;             (robot-at-card ?cfrom)
-;;             (robot-at-cell ?d1from ?d2from)
-;;             (card-at ?cfrom ?p1from ?p2from)
-;;             (card-at ?cto ?p1to ?p2to)
-;;             (next ?p1from ?p1to)
-;;             (= ?p2from ?p2to)
-;;             (= ?d2from ?d2to)
-;;             (not (= ?d1from ?d1to))
-;;             (not (= ?d1to ?d2to))
-;;         )
-;;     :effect
-;;         (and
-;;             (not (robot-at-card ?cfrom))
-;;             (not (robot-at-cell ?d1from ?d2from))
-;;             (robot-at-card ?cto)
-;;             (robot-at-cell ?d1to ?d2to)
-;;             (increase (total-cost) (between-cards-cost))
-;;         )
-;; )
-;;
-;; ;; moves the robot between to cards: ?cfrom (SW) -> ?cto (NW) or ?cfrom (SE) -> ?cto (NE)
-;; (:action move-between-cards-south
-;;     :parameters ( ?cfrom - card ?p1from - gridpos ?p2from - gridpos ?d1from - directionV ?d2from - directionH ?cto - card ?p1to - gridpos ?p2to - gridpos ?d1to - directionV ?d2to - directionH)
-;;     :precondition
-;;         (and
-;;             (not (cards-moving))
-;;             (= ?d1from s)
-;;             (robot-at-card ?cfrom)
-;;             (robot-at-cell ?d1from ?d2from)
-;;             (card-at ?cfrom ?p1from ?p2from)
-;;             (card-at ?cto ?p1to ?p2to)
-;;             (next ?p1to ?p1from)
-;;             (= ?p2from ?p2to)
-;;             (= ?d2from ?d2to)
-;;             (not (= ?d1from ?d1to))
-;;             (not (= ?d1to ?d2to))
-;;         )
-;;     :effect
-;;         (and
-;;             (not (robot-at-card ?cfrom))
-;;             (not (robot-at-cell ?d1from ?d2from))
-;;             (robot-at-card ?cto)
-;;             (robot-at-cell ?d1to ?d2to)
-;;             (increase (total-cost) (between-cards-cost))
-;;         )
-;; )
-
-;; Move between the sectors inside the card ?c
+;; Moves the robot between the sectors inside the card ?c
 (:action move-inside-card
     :parameters (?c - card
                  ?d1from - directionV ?d2from - directionH
@@ -261,49 +228,57 @@
         )
 )
 
-;; ;; moves the robot horizontally within a card
-;; ;; this is only possible if there is no wall between the sectors (blocked)
-;; (:action move-inside-cards-h
-;;     :parameters ( ?c - card ?d1from - directionV ?d2from - directionH ?d1to - directionV ?d2to - directionH)
-;;     :precondition
-;;         (and
-;;             (not (cards-moving))
-;;             (robot-at-card ?c)
-;;             (robot-at-cell ?d1from ?d2from)
-;;             (= ?d1from ?d1to)
-;;             (not (= ?d1to ?d2to))
-;;             (not (blocked ?c ?d1from ?d2from ?d1to ?d2to))
-;;         )
-;;     :effect
-;;         (and
-;;             (not (robot-at-cell ?d1from ?d2from))
-;;             (robot-at-cell ?d1to ?d2to)
-;;             (increase (total-cost) (inside-cards-cost))
-;;         )
-;; )
-;;
-;; ;; moves the robot vertically within a card
-;; ;; this is only possible if there is no wall between the sectors (blocked)
-;; (:action move-inside-cards-v
-;;     :parameters ( ?c - card ?d1from - directionV ?d2from - directionH ?d1to - directionV ?d2to - directionH)
-;;     :precondition
-;;         (and
-;;             (not (cards-moving))
-;;             (robot-at-card ?c)
-;;             (robot-at-cell ?d1from ?d2from)
-;;             (= ?d2from ?d2to)
-;;             (not (= ?d1to ?d2to))
-;;             (not (blocked ?c ?d1from ?d2from ?d1to ?d2to))
-;;         )
-;;     :effect
-;;         (and
-;;             (not (robot-at-cell ?d1from ?d2from))
-;;             (robot-at-cell ?d1to ?d2to)
-;;             (increase (total-cost) (inside-cards-cost))
-;;         )
-;; )
+{move_cards}
 
+;; TODO: Replace this with a goal (goal-at gridpos/sector)?
+;; checks whether the robot can leave the labyrinth i.e
+;; whether the card the robot is currently on is in the bottom right corner
+;; and the rover is in sector SE
+(:action leave
+:parameters(?c - card ?prow - gridpos ?pcolumn - gridpos)
+:precondition
+    (and
+        (not (cards-moving))
+        (robot-at-card ?c)
+        (robot-at-cell s e)
+        (card-at ?c ?prow ?pcolumn)
+        (max-pos ?prow)
+        (max-pos ?pcolumn)
+    )
+:effect
+    (and
+        (left)
+    )
+)
+)
+'''
+    return s
 
+def htg(max_grid_size):
+    actions = []
+    for grid_size in range(2, max_grid_size + 1):
+        for direction in ['north', 'south', 'east', 'west']:
+            actions += [moveCardAction(direction, grid_size)]
+
+    actions = '\n\n'.join(actions)
+    s = genDomain('', actions)
+    print(s)
+    return 0
+
+def stepwise():
+    predicates = '''
+    ;; flags to indicate that a row/column is rotating in the corresponding direction
+    (cards-moving-west)
+    (cards-moving-east)
+    (cards-moving-south)
+    (cards-moving-north)
+    ;; the card whose position needs to be updated next while rotating
+    (next-moving-card ?c - card)
+    ;; the card that was removed to rotate and which needs to be placed at the beginning/end of the row/column
+    (new-headtail-card ?c - card)
+'''
+
+    actions = '''
 ;; there 3 (start, move, stop) for each direction to rotate the cards
 ;; rotating ends in a deadend if the card with the robot in the row/column that is rotated
 ;; ----------------------------------------------------------------------------------------
@@ -613,27 +588,20 @@
         (not (next-moving-card ?cm))
     )
 )
+'''
+    s = genDomain(predicates, actions)
+    print(s)
+    return 0
 
-;; ----------------------------------------------------------------------------------------
-
-;; TODO: Replace this with a goal (goal-at gridpos/sector)?
-;; checks whether the robot can leave the labyrinth i.e
-;; whether the card the robot is currently on is in the bottom right corner
-;; and the rover is in sector SE
-(:action leave
-:parameters(?c - card ?prow - gridpos ?pcolumn - gridpos)
-:precondition
-    (and
-        (not (cards-moving))
-        (robot-at-card ?c)
-        (robot-at-cell s e)
-        (card-at ?c ?prow ?pcolumn)
-        (max-pos ?prow)
-        (max-pos ?pcolumn)
-    )
-:effect
-    (and
-        (left)
-    )
-)
-)
+if __name__ == '__main__':
+    if len(sys.argv) not in [2, 3]:
+        print(f'Usage: {sys.argv[0]} htg max-grid-size', file = sys.stderr)
+        print(f'       {sys.argv[0]} stepwise', file = sys.stderr)
+        sys.exit(-1)
+    if sys.argv[1] == 'htg':
+        sys.exit(htg(int(sys.argv[2])))
+    elif sys.argv[1] == 'stepwise':
+        sys.exit(stepwise())
+    else:
+        print(f'Error: Unkown command {sys.argv[1]}', file = sys.stderr)
+        sys.exit(-1)
