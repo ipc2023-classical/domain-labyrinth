@@ -12,7 +12,8 @@ In this way, it is possible to change the layout of the labyrinth so that
 the robot can move through it to find its way out.
 The robot always starts in the top left corner, and is allowed to leave
 the labyrinth once it reaches the bottom right corner. The row or column of
-cards can be pushed only if the robot is not occupying that row or column.
+cards can be pushed only if the robot is not occupying any card in that row or
+column.
 
 This domain was submitted to International Planning Competition 2023 by
  - Rebecca Eifler <eifler@cs.uni-saarland.de>, and
