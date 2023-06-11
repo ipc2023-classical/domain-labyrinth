@@ -1,5 +1,5 @@
 (define (domain labyrinth)
-(:requirements :adl :action-costs :fluents)
+(:requirements :adl :action-costs)
 (:types
     ;; card consisting of 4 sectors
     ;; NW | NE

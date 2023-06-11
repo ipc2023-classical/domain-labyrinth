@@ -80,7 +80,7 @@ def moveCardAction(direction, grid_size):
 def genDomain(additional_predicates, move_cards):
     s = f'''
 (define (domain labyrinth)
-(:requirements :adl :action-costs :fluents)
+(:requirements :adl :action-costs)
 
 (:types
     ;; card consisting of 4 sectors
