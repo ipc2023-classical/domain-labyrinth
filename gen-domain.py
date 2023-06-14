@@ -28,7 +28,7 @@ def moveCardAction(direction, grid_size):
         prevail += [f'(NEXT ?card{i + 1}-{freecoord} ?card{i}-{freecoord})']
 
     for i in range(1, grid_size + 1):
-        prevail += [f'(not (robot-at-card ?card{i}))']
+        prevail += [f'(not (robot-at ?card{i}))']
 
     pre = []
     for i in range(1, grid_size + 1):
@@ -83,17 +83,14 @@ def genDomain(additional_predicates, move_cards):
 (:requirements :adl :action-costs)
 
 (:types
-    ;; card consisting of 4 sectors
-    ;; NW | NE
-    ;;--------
-    ;; SW | SE
+    ;; card with 2 to 4 paths
     card - object
     direction - object
     ;; vertical direction: N S
     directionV - direction
     ;; horizontal directions: W E
     directionH - direction
-    ;; coordinates for positions of the card in the grid
+    ;; values for positions of the card in the grid
     gridpos - object
 )
 
@@ -112,125 +109,118 @@ def genDomain(additional_predicates, move_cards):
     ;; moving from ?c in direction ?d is blocked by a wall
     (BLOCKED ?c - card ?d - direction)
     ;; robot is located on card ?c
-    (robot-at-card ?c - card)
-    ;; robot is located in sector ?d1 ?d2
-    (robot-at-cell ?d1 - directionV ?d2 - directionH)
+    (robot-at ?c - card)
     ;; card ?c is positioned in the grid at ?p1 ?p2
     (card-at ?c - card ?p1 - gridpos ?p2 - gridpos)
-    ;; flag to indicate that a card is currently moving and the robot cannot move
-    ;; this is used only for stepwise rotation of cards
-    (cards-moving)
-    {additional_predicates}
     ;; flag indicating that the robot left the maze e.i. that the goal has been reached
     (left)
+
+    ;; flag to indicate that a card is currently moving an the robot cannot move
+    (cards-moving)
+    {additional_predicates}
 )
 
 (:functions
     (total-cost) - number
-    (between-cards-cost) - number
-    (inside-cards-cost) - number
+    (move-robot-cost) - number
     (move-card) - number
 )
 
-;; Moves the robot between two different cards.
-;; The robot moves from
-;;    the sector (?d1from ?d2from) on the card ?cfrom located at (?p1from ?p2from)
-;; to
-;;    the sector (?d1to ?d2to) on the card ?cto located at (?p1to ?p2to)
-;; Note that movement between cards can never be blocked they just need to be
-;; aligned next to each other.
-(:action move-between-cards
-    :parameters (?cfrom - card ?p1from - gridpos ?p2from - gridpos
-                 ?d1from - directionV ?d2from - directionH
-                 ?cto - card ?p1to - gridpos ?p2to - gridpos
-                 ?d1to - directionV ?d2to - directionH)
+;; moves the robot between to cards
+(:action move-west
+    :parameters (?cfrom - card ?p1from - gridpos ?p2from - gridpos ?dfrom - directionH ?cto - card ?p1to - gridpos ?p2to - gridpos ?dto - directionH)
     :precondition
         (and
             (not (cards-moving))
+            (= ?dfrom w)
+            (robot-at ?cfrom)
             (card-at ?cfrom ?p1from ?p2from)
             (card-at ?cto ?p1to ?p2to)
-            (robot-at-card ?cfrom)
-            (robot-at-cell ?d1from ?d2from)
-
-            (or
-                ;; (NW) to (NE) or (SW) to (SE)
-                (and (= ?d2from W)
-                     (NEXT ?p2from ?p2to)
-                     (= ?p1from ?p1to)
-                     (= ?d1from ?d1to)
-                     (not (= ?d2from ?d2to))
-                     (not (= ?d1to ?d2to)))
-
-                ;; (NE) to (NW) or (SE) to (SW)
-                (and (= ?d2from E)
-                     (NEXT ?p2to ?p2from)
-                     (= ?p1from ?p1to)
-                     (= ?d1from ?d1to)
-                     (not (= ?d2from ?d2to))
-                     (not (= ?d1to ?d2to))
-                )
-
-                ;; (NW) to (SW) or (NE) to (SE)
-                (and (= ?d1from N)
-                     (NEXT ?p1from ?p1to)
-                     (= ?p2from ?p2to)
-                     (= ?d2from ?d2to)
-                     (not (= ?d1from ?d1to))
-                     (not (= ?d1to ?d2to))
-                )
-
-                ;; (SW) to (NW) or (SE) to (NE)
-                (and (= ?d1from S)
-                     (NEXT ?p1to ?p1from)
-                     (= ?p2from ?p2to)
-                     (= ?d2from ?d2to)
-                     (not (= ?d1from ?d1to))
-                     (not (= ?d1to ?d2to))
-                )
-            )
+            (next ?p2from ?p2to)
+            (= ?p1from ?p1to)
+            (not (= ?dfrom ?dto))
+            (not (blocked ?cfrom ?dfrom))
+            (not (blocked ?cto ?dto))
         )
-
     :effect
         (and
-            (not (robot-at-card ?cfrom))
-            (not (robot-at-cell ?d1from ?d2from))
-            (robot-at-card ?cto)
-            (robot-at-cell ?d1to ?d2to)
-            (increase (total-cost) (between-cards-cost))
+            (not (robot-at ?cfrom))
+            (robot-at ?cto)
+            (increase (total-cost) (move-robot-cost))
         )
 )
 
-;; Moves the robot between the sectors inside the card ?c
-(:action move-inside-card
-    :parameters (?c - card
-                 ?d1from - directionV ?d2from - directionH
-                 ?d1to - directionV ?d2to - directionH)
+(:action move-east
+    :parameters (?cfrom - card ?p1from - gridpos ?p2from - gridpos ?dfrom - directionH ?cto - card ?p1to - gridpos ?p2to - gridpos ?dto - directionH)
     :precondition
         (and
             (not (cards-moving))
-            (robot-at-card ?c)
-            (robot-at-cell ?d1from ?d2from)
-            (not (BLOCKED ?c ?d1from ?d2from ?d1to ?d2to))
-            (or
-                (and (= ?d1from ?d1to)
-                     (not (= ?d2from ?d2to))
-                )
-                (and (= ?d2from ?d2to)
-                     (not (= ?d1from ?d1to))
-                )
-            )
+            (= ?dfrom e)
+            (robot-at ?cfrom)
+            (card-at ?cfrom ?p1from ?p2from)
+            (card-at ?cto ?p1to ?p2to)
+            (next ?p2to ?p2from)
+            (= ?p1from ?p1to)
+            (not (= ?dfrom ?dto))
+            (not (blocked ?cfrom ?dfrom))
+            (not (blocked ?cto ?dto))
         )
     :effect
         (and
-            (not (robot-at-cell ?d1from ?d2from))
-            (robot-at-cell ?d1to ?d2to)
-            (increase (total-cost) (inside-cards-cost))
+            (not (robot-at ?cfrom))
+            (robot-at ?cto)
+            (increase (total-cost) (move-robot-cost))
+        )
+)
+
+(:action move-north
+    :parameters (?cfrom - card ?p1from - gridpos ?p2from - gridpos ?dfrom - directionV ?cto - card ?p1to - gridpos ?p2to - gridpos ?dto - directionV)
+    :precondition
+        (and
+            (not (cards-moving))
+            (= ?dfrom n)
+            (robot-at ?cfrom)
+            (card-at ?cfrom ?p1from ?p2from)
+            (card-at ?cto ?p1to ?p2to)
+            (next ?p1from ?p1to)
+            (= ?p2from ?p2to)
+            (not (= ?dfrom ?dto))
+            (not (blocked ?cfrom ?dfrom))
+            (not (blocked ?cto ?dto))
+        )
+    :effect
+        (and
+            (not (robot-at ?cfrom))
+            (robot-at ?cto)
+            (increase (total-cost) (move-robot-cost))
+        )
+)
+
+(:action move-south
+    :parameters (?cfrom - card ?p1from - gridpos ?p2from - gridpos ?dfrom - directionV ?cto - card ?p1to - gridpos ?p2to - gridpos ?dto - directionV)
+    :precondition
+        (and
+            (not (cards-moving))
+            (= ?dfrom s)
+            (robot-at ?cfrom)
+            (card-at ?cfrom ?p1from ?p2from)
+            (card-at ?cto ?p1to ?p2to)
+            (next ?p1to ?p1from)
+            (= ?p2from ?p2to)
+            (not (= ?dfrom ?dto))
+            (not (blocked ?cfrom ?dfrom))
+            (not (blocked ?cto ?dto))
+        )
+    :effect
+        (and
+            (not (robot-at ?cfrom))
+            (robot-at ?cto)
+            (increase (total-cost) (move-robot-cost))
         )
 )
 
 {move_cards}
 
-;; TODO: Replace this with a goal (goal-at gridpos/sector)?
 ;; checks whether the robot can leave the labyrinth i.e
 ;; whether the card the robot is currently on is in the bottom right corner
 ;; and the rover is in sector SE
@@ -239,11 +229,11 @@ def genDomain(additional_predicates, move_cards):
 :precondition
     (and
         (not (cards-moving))
-        (robot-at-card ?c)
-        (robot-at-cell s e)
+        (robot-at ?c)
         (card-at ?c ?prow ?pcolumn)
-        (MAX-POS ?prow)
-        (MAX-POS ?pcolumn)
+        (max-pos ?prow)
+        (max-pos ?pcolumn)
+        (not (blocked ?c s ))
     )
 :effect
     (and
@@ -293,11 +283,11 @@ def stepwise():
     (and
         (not (cards-moving))
         (not (cards-moving-west))
-        (not (robot-at-card ?cm))
+        (not (robot-at ?cm))
         (card-at ?cm ?rowindex ?pcolumn )
-        (MIN-POS ?pcolumn)
+        (min-pos ?pcolumn)
         (card-at ?cnext ?rowindex ?nextcolumn)
-        (NEXT ?nextcolumn ?pcolumn)
+        (next ?nextcolumn ?pcolumn)
     )
 :effect
     (and
@@ -317,12 +307,12 @@ def stepwise():
     (and
         (cards-moving)
         (cards-moving-west)
-        (not (robot-at-card ?cm))
+        (not (robot-at ?cm))
         (next-moving-card ?cm)
         (card-at ?cm ?rowindex ?pcolumn )
         (card-at ?cnext ?rowindex ?nextcolumn)
-        (NEXT ?pcolumn ?prevcolumn)
-        (NEXT ?nextcolumn ?pcolumn)
+        (next ?pcolumn ?prevcolumn)
+        (next ?nextcolumn ?pcolumn)
     )
 :effect
     (and
@@ -343,11 +333,11 @@ def stepwise():
     (and
         (cards-moving)
         (cards-moving-west)
-        (not (robot-at-card ?cm))
+        (not (robot-at ?cm))
         (next-moving-card ?cm)
         (card-at ?cm ?rowindex ?pcolumn )
-        (NEXT ?pcolumn ?prevcolumn)
-        (MAX-POS ?max)
+        (next ?pcolumn ?prevcolumn)
+        (max-pos ?max)
         (= ?pcolumn ?max)
         (new-headtail-card ?newtc)
     )
@@ -372,11 +362,11 @@ def stepwise():
     (and
         (not (cards-moving))
         (not (cards-moving-east))
-        (not (robot-at-card ?cm))
+        (not (robot-at ?cm))
         (card-at ?cm ?rowindex ?pcolumn )
-        (MAX-POS ?pcolumn)
+        (max-pos ?pcolumn)
         (card-at ?cnext ?rowindex ?nextcolumn)
-        (NEXT ?pcolumn ?nextcolumn )
+        (next ?pcolumn ?nextcolumn )
     )
 :effect
     (and
@@ -395,12 +385,12 @@ def stepwise():
     (and
         (cards-moving)
         (cards-moving-east)
-        (not (robot-at-card ?cm))
+        (not (robot-at ?cm))
         (next-moving-card ?cm)
         (card-at ?cm ?rowindex ?pcolumn )
         (card-at ?cnext ?rowindex ?nextcolumn)
-        (NEXT ?prevcolumn ?pcolumn)
-        (NEXT ?pcolumn ?nextcolumn)
+        (next ?prevcolumn ?pcolumn)
+        (next ?pcolumn ?nextcolumn)
     )
 :effect
     (and
@@ -419,11 +409,11 @@ def stepwise():
     (and
         (cards-moving)
         (cards-moving-east)
-        (not (robot-at-card ?cm))
+        (not (robot-at ?cm))
         (next-moving-card ?cm)
         (card-at ?cm ?rowindex ?pcolumn )
-        (NEXT  ?prevcolumn ?pcolumn)
-        (MIN-POS ?min)
+        (next  ?prevcolumn ?pcolumn)
+        (min-pos ?min)
         (= ?pcolumn ?min)
         (new-headtail-card ?newtc)
     )
@@ -447,11 +437,11 @@ def stepwise():
     (and
         (not (cards-moving))
         (not (cards-moving-north))
-        (not (robot-at-card ?cm))
+        (not (robot-at ?cm))
         (card-at ?cm ?prow ?columnindex )
-        (MIN-POS ?prow)
+        (min-pos ?prow)
         (card-at ?cnext ?nextrow ?columnindex)
-        (NEXT ?prow ?nextrow )
+        (next ?prow ?nextrow )
     )
 :effect
     (and
@@ -470,12 +460,12 @@ def stepwise():
     (and
         (cards-moving)
         (cards-moving-north)
-        (not (robot-at-card ?cm))
+        (not (robot-at ?cm))
         (next-moving-card ?cm)
         (card-at ?cm ?columnindex ?prow )
         (card-at ?cnext ?nextrow ?columnindex)
-        (NEXT ?prow ?prerow)
-        (NEXT ?nextrow ?prow)
+        (next ?prow ?prerow)
+        (next ?nextrow ?prow)
     )
 :effect
     (and
@@ -494,11 +484,11 @@ def stepwise():
     (and
         (cards-moving)
         (cards-moving-north)
-        (not (robot-at-card ?cm))
+        (not (robot-at ?cm))
         (next-moving-card ?cm)
         (card-at ?cm ?prow ?columnindex )
-        (NEXT ?prow ?prerow)
-        (MAX-POS ?max)
+        (next ?prow ?prerow)
+        (max-pos ?max)
         (= ?prow ?max)
         (new-headtail-card ?newtc)
     )
@@ -522,11 +512,11 @@ def stepwise():
     (and
         (not (cards-moving))
         (not (cards-moving-south))
-        (not (robot-at-card ?cm))
+        (not (robot-at ?cm))
         (card-at ?cm ?prow ?columnindex )
-        (MAX-POS ?prow)
+        (max-pos ?prow)
         (card-at ?cnext ?nextrow ?columnindex)
-        (NEXT ?nextrow ?prow)
+        (next ?nextrow ?prow)
     )
 :effect
     (and
@@ -545,12 +535,12 @@ def stepwise():
     (and
         (cards-moving)
         (cards-moving-south)
-        (not (robot-at-card ?cm))
+        (not (robot-at ?cm))
         (next-moving-card ?cm)
         (card-at ?cm ?columnindex ?prow )
         (card-at ?cnext ?nextrow ?columnindex)
-        (NEXT ?prerow ?prow)
-        (NEXT ?prow ?nextrow)
+        (next ?prerow ?prow)
+        (next ?prow ?nextrow)
     )
 :effect
     (and
@@ -569,11 +559,11 @@ def stepwise():
     (and
         (cards-moving)
         (cards-moving-south)
-        (not (robot-at-card ?cm))
+        (not (robot-at ?cm))
         (next-moving-card ?cm)
         (card-at ?cm ?prow ?columnindex )
-        (NEXT ?prerow ?prow)
-        (MIN-POS ?min)
+        (next ?prerow ?prow)
+        (min-pos ?min)
         (= ?prow ?min)
         (new-headtail-card ?newtc)
     )
