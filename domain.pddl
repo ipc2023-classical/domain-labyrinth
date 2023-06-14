@@ -12,9 +12,9 @@
     gridpos - object
 )
 
-(:constants 
+(:constants
     S N - directionV
-	W E - directionH
+    W E - directionH
 )
 
 (:predicates
@@ -28,7 +28,7 @@
     (blocked ?c - card ?d - direction)
     ;; robot is located on card ?c
     (robot-at ?c - card)
-    ;; card ?c is positioned in the grid at ?p1 ?p2 
+    ;; card ?c is positioned in the grid at ?p1 ?p2
     (card-at ?c - card ?p1 - gridpos ?p2 - gridpos)
     ;; flag to indicate that a card is currently mowing an the robot cannot move
     (cards-mowing)
@@ -39,7 +39,7 @@
     (cards-mowing-north)
     ;; the card whose position needs to be updated next while rotating
     (next-mowing-card ?c - card)
-    ;; the card that was removed to rotate and which needs to be placed at the beginning/end of the row/column 
+    ;; the card that was removed to rotate and which needs to be placed at the beginning/end of the row/column
     (new-headtail-card ?c - card)
     ;; flag indicating that the robot left the maze e.i. that the goal has been reached
     (left)
@@ -153,7 +153,7 @@
 ;; determines which card should be updated next the corresponding move action
 ;; and makes all other actions inapplicable by setting cards-mowing and cards-mowing-west
 (:action start-move-card-row-west
-:parameters(?cm - card ?rowindex - gridpos ?pcolumn - gridpos ?cnext - card ?nextcolumn - gridpos) 
+:parameters(?cm - card ?rowindex - gridpos ?pcolumn - gridpos ?cnext - card ?nextcolumn - gridpos)
 :precondition
     (and
         (not (cards-mowing))
@@ -177,7 +177,7 @@
 
 ;; updates the grid column index of ?cm which is the next card to update
 (:action move-card-row-west
-:parameters(?cm - card ?rowindex - gridpos ?pcolumn - gridpos ?cnext - card ?nextcolumn - gridpos ?prevcolumn - gridpos) 
+:parameters(?cm - card ?rowindex - gridpos ?pcolumn - gridpos ?cnext - card ?nextcolumn - gridpos ?prevcolumn - gridpos)
 :precondition
     (and
         (cards-mowing)
@@ -203,7 +203,7 @@
 ;; stops rotation
 ;; updates the grid index of the card specified by the start move action in new-headtail-card
 (:action stop-move-card-row-west
-:parameters(?cm - card ?rowindex - gridpos ?pcolumn - gridpos ?prevcolumn - gridpos ?max - gridpos ?newtc - card) 
+:parameters(?cm - card ?rowindex - gridpos ?pcolumn - gridpos ?prevcolumn - gridpos ?max - gridpos ?newtc - card)
 :precondition
     (and
         (cards-mowing)
@@ -232,7 +232,7 @@
 ;; ----------------------------------------------------------------------------------------
 
 (:action start-move-card-row-east
-:parameters(?cm - card ?rowindex - gridpos ?pcolumn - gridpos ?cnext - card ?nextcolumn - gridpos) 
+:parameters(?cm - card ?rowindex - gridpos ?pcolumn - gridpos ?cnext - card ?nextcolumn - gridpos)
 :precondition
     (and
         (not (cards-mowing))
@@ -255,7 +255,7 @@
 )
 
 (:action move-card-row-east
-:parameters(?cm - card ?rowindex - gridpos ?pcolumn - gridpos ?cnext - card ?nextcolumn - gridpos ?prevcolumn - gridpos) 
+:parameters(?cm - card ?rowindex - gridpos ?pcolumn - gridpos ?cnext - card ?nextcolumn - gridpos ?prevcolumn - gridpos)
 :precondition
     (and
         (cards-mowing)
@@ -279,7 +279,7 @@
 )
 
 (:action stop-move-card-row-east
-:parameters(?cm - card ?rowindex - gridpos ?pcolumn - gridpos ?prevcolumn - gridpos ?min - gridpos ?newtc - card) 
+:parameters(?cm - card ?rowindex - gridpos ?pcolumn - gridpos ?prevcolumn - gridpos ?min - gridpos ?newtc - card)
 :precondition
     (and
         (cards-mowing)
@@ -307,7 +307,7 @@
 ;; ----------------------------------------------------------------------------------------
 
 (:action start-move-card-column-north
-:parameters(?cm - card ?prow - gridpos ?columnindex - gridpos  ?cnext - card ?nextrow - gridpos) 
+:parameters(?cm - card ?prow - gridpos ?columnindex - gridpos  ?cnext - card ?nextrow - gridpos)
 :precondition
     (and
         (not (cards-mowing))
@@ -330,7 +330,7 @@
 )
 
 (:action move-card-column-north
-:parameters(?cm - card ?prow - gridpos ?columnindex - gridpos  ?cnext - card ?nextrow - gridpos ?prerow - gridpos) 
+:parameters(?cm - card ?prow - gridpos ?columnindex - gridpos  ?cnext - card ?nextrow - gridpos ?prerow - gridpos)
 :precondition
     (and
         (cards-mowing)
@@ -354,7 +354,7 @@
 )
 
 (:action stop-move-card-column-north
-:parameters(?cm - card ?prow - gridpos ?columnindex - gridpos ?prerow - gridpos ?max - gridpos ?newtc - card) 
+:parameters(?cm - card ?prow - gridpos ?columnindex - gridpos ?prerow - gridpos ?max - gridpos ?newtc - card)
 :precondition
     (and
         (cards-mowing)
@@ -382,7 +382,7 @@
 ;; ----------------------------------------------------------------------------------------
 
 (:action start-move-card-column-south
-:parameters(?cm - card ?prow - gridpos ?columnindex - gridpos  ?cnext - card ?nextrow - gridpos) 
+:parameters(?cm - card ?prow - gridpos ?columnindex - gridpos  ?cnext - card ?nextrow - gridpos)
 :precondition
     (and
         (not (cards-mowing))
@@ -405,7 +405,7 @@
 )
 
 (:action move-card-column-south
-:parameters(?cm - card ?prow - gridpos ?columnindex - gridpos  ?cnext - card ?nextrow - gridpos ?prerow - gridpos) 
+:parameters(?cm - card ?prow - gridpos ?columnindex - gridpos  ?cnext - card ?nextrow - gridpos ?prerow - gridpos)
 :precondition
     (and
         (cards-mowing)
@@ -429,7 +429,7 @@
 )
 
 (:action stop-move-card-column-south
-:parameters(?cm - card ?prow - gridpos ?columnindex - gridpos ?prerow - gridpos ?min - gridpos ?newtc - card) 
+:parameters(?cm - card ?prow - gridpos ?columnindex - gridpos ?prerow - gridpos ?min - gridpos ?newtc - card)
 :precondition
     (and
         (cards-mowing)
@@ -460,7 +460,7 @@
 ;; whether the card the robot is currently on is in the bottom right corner
 ;; and the rover is in sector SE
 (:action leave
-:parameters(?c - card ?prow - gridpos ?pcolumn - gridpos) 
+:parameters(?c - card ?prow - gridpos ?pcolumn - gridpos)
 :precondition
     (and
         (not (cards-mowing))
