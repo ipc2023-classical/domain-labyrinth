@@ -22,10 +22,10 @@ def moveCardAction(direction, grid_size):
         params += [f'?card{i}-{freecoord} - gridpos']
 
     prevail = []
-    prevail += [f'(min-pos ?card1-{freecoord})']
-    prevail += [f'(max-pos ?card{grid_size}-{freecoord})']
+    prevail += [f'(MIN-POS ?card1-{freecoord})']
+    prevail += [f'(MAX-POS ?card{grid_size}-{freecoord})']
     for i in range(1, grid_size):
-        prevail += [f'(next ?card{i + 1}-{freecoord} ?card{i}-{freecoord})']
+        prevail += [f'(NEXT ?card{i + 1}-{freecoord} ?card{i}-{freecoord})']
 
     for i in range(1, grid_size + 1):
         prevail += [f'(not (robot-at-card ?card{i}))']
@@ -104,13 +104,13 @@ def genDomain(additional_predicates, move_cards):
 
 (:predicates
     ;; ordering of values for grid positions ?p1 = ?p2 + 1
-    (next ?p1 - gridpos ?p2 - gridpos)
+    (NEXT ?p1 - gridpos ?p2 - gridpos)
     ;; maximal grid index
-    (max-pos ?p - gridpos)
+    (MAX-POS ?p - gridpos)
     ;; minimal grid index
-    (min-pos ?p - gridpos)
-    ;; moving on ?c from sector ?d1from ?d2from to sector ?d1to ?d2to is blocked
-    (blocked ?c - card ?d1from - directionV ?d2from - directionH ?d1to - directionV ?d2to - directionH)
+    (MIN-POS ?p - gridpos)
+    ;; moving from ?c in direction ?d is blocked by a wall
+    (BLOCKED ?c - card ?d - direction)
     ;; robot is located on card ?c
     (robot-at-card ?c - card)
     ;; robot is located in sector ?d1 ?d2
@@ -155,7 +155,7 @@ def genDomain(additional_predicates, move_cards):
             (or
                 ;; (NW) to (NE) or (SW) to (SE)
                 (and (= ?d2from W)
-                     (next ?p2from ?p2to)
+                     (NEXT ?p2from ?p2to)
                      (= ?p1from ?p1to)
                      (= ?d1from ?d1to)
                      (not (= ?d2from ?d2to))
@@ -163,7 +163,7 @@ def genDomain(additional_predicates, move_cards):
 
                 ;; (NE) to (NW) or (SE) to (SW)
                 (and (= ?d2from E)
-                     (next ?p2to ?p2from)
+                     (NEXT ?p2to ?p2from)
                      (= ?p1from ?p1to)
                      (= ?d1from ?d1to)
                      (not (= ?d2from ?d2to))
@@ -172,7 +172,7 @@ def genDomain(additional_predicates, move_cards):
 
                 ;; (NW) to (SW) or (NE) to (SE)
                 (and (= ?d1from N)
-                     (next ?p1from ?p1to)
+                     (NEXT ?p1from ?p1to)
                      (= ?p2from ?p2to)
                      (= ?d2from ?d2to)
                      (not (= ?d1from ?d1to))
@@ -181,7 +181,7 @@ def genDomain(additional_predicates, move_cards):
 
                 ;; (SW) to (NW) or (SE) to (NE)
                 (and (= ?d1from S)
-                     (next ?p1to ?p1from)
+                     (NEXT ?p1to ?p1from)
                      (= ?p2from ?p2to)
                      (= ?d2from ?d2to)
                      (not (= ?d1from ?d1to))
@@ -210,7 +210,7 @@ def genDomain(additional_predicates, move_cards):
             (not (cards-moving))
             (robot-at-card ?c)
             (robot-at-cell ?d1from ?d2from)
-            (not (blocked ?c ?d1from ?d2from ?d1to ?d2to))
+            (not (BLOCKED ?c ?d1from ?d2from ?d1to ?d2to))
             (or
                 (and (= ?d1from ?d1to)
                      (not (= ?d2from ?d2to))
@@ -242,8 +242,8 @@ def genDomain(additional_predicates, move_cards):
         (robot-at-card ?c)
         (robot-at-cell s e)
         (card-at ?c ?prow ?pcolumn)
-        (max-pos ?prow)
-        (max-pos ?pcolumn)
+        (MAX-POS ?prow)
+        (MAX-POS ?pcolumn)
     )
 :effect
     (and
@@ -295,9 +295,9 @@ def stepwise():
         (not (cards-moving-west))
         (not (robot-at-card ?cm))
         (card-at ?cm ?rowindex ?pcolumn )
-        (min-pos ?pcolumn)
+        (MIN-POS ?pcolumn)
         (card-at ?cnext ?rowindex ?nextcolumn)
-        (next ?nextcolumn ?pcolumn)
+        (NEXT ?nextcolumn ?pcolumn)
     )
 :effect
     (and
@@ -321,8 +321,8 @@ def stepwise():
         (next-moving-card ?cm)
         (card-at ?cm ?rowindex ?pcolumn )
         (card-at ?cnext ?rowindex ?nextcolumn)
-        (next ?pcolumn ?prevcolumn)
-        (next ?nextcolumn ?pcolumn)
+        (NEXT ?pcolumn ?prevcolumn)
+        (NEXT ?nextcolumn ?pcolumn)
     )
 :effect
     (and
@@ -346,8 +346,8 @@ def stepwise():
         (not (robot-at-card ?cm))
         (next-moving-card ?cm)
         (card-at ?cm ?rowindex ?pcolumn )
-        (next ?pcolumn ?prevcolumn)
-        (max-pos ?max)
+        (NEXT ?pcolumn ?prevcolumn)
+        (MAX-POS ?max)
         (= ?pcolumn ?max)
         (new-headtail-card ?newtc)
     )
@@ -374,9 +374,9 @@ def stepwise():
         (not (cards-moving-east))
         (not (robot-at-card ?cm))
         (card-at ?cm ?rowindex ?pcolumn )
-        (max-pos ?pcolumn)
+        (MAX-POS ?pcolumn)
         (card-at ?cnext ?rowindex ?nextcolumn)
-        (next ?pcolumn ?nextcolumn )
+        (NEXT ?pcolumn ?nextcolumn )
     )
 :effect
     (and
@@ -399,8 +399,8 @@ def stepwise():
         (next-moving-card ?cm)
         (card-at ?cm ?rowindex ?pcolumn )
         (card-at ?cnext ?rowindex ?nextcolumn)
-        (next ?prevcolumn ?pcolumn)
-        (next ?pcolumn ?nextcolumn)
+        (NEXT ?prevcolumn ?pcolumn)
+        (NEXT ?pcolumn ?nextcolumn)
     )
 :effect
     (and
@@ -422,8 +422,8 @@ def stepwise():
         (not (robot-at-card ?cm))
         (next-moving-card ?cm)
         (card-at ?cm ?rowindex ?pcolumn )
-        (next  ?prevcolumn ?pcolumn)
-        (min-pos ?min)
+        (NEXT  ?prevcolumn ?pcolumn)
+        (MIN-POS ?min)
         (= ?pcolumn ?min)
         (new-headtail-card ?newtc)
     )
@@ -449,9 +449,9 @@ def stepwise():
         (not (cards-moving-north))
         (not (robot-at-card ?cm))
         (card-at ?cm ?prow ?columnindex )
-        (min-pos ?prow)
+        (MIN-POS ?prow)
         (card-at ?cnext ?nextrow ?columnindex)
-        (next ?prow ?nextrow )
+        (NEXT ?prow ?nextrow )
     )
 :effect
     (and
@@ -474,8 +474,8 @@ def stepwise():
         (next-moving-card ?cm)
         (card-at ?cm ?columnindex ?prow )
         (card-at ?cnext ?nextrow ?columnindex)
-        (next ?prow ?prerow)
-        (next ?nextrow ?prow)
+        (NEXT ?prow ?prerow)
+        (NEXT ?nextrow ?prow)
     )
 :effect
     (and
@@ -497,8 +497,8 @@ def stepwise():
         (not (robot-at-card ?cm))
         (next-moving-card ?cm)
         (card-at ?cm ?prow ?columnindex )
-        (next ?prow ?prerow)
-        (max-pos ?max)
+        (NEXT ?prow ?prerow)
+        (MAX-POS ?max)
         (= ?prow ?max)
         (new-headtail-card ?newtc)
     )
@@ -524,9 +524,9 @@ def stepwise():
         (not (cards-moving-south))
         (not (robot-at-card ?cm))
         (card-at ?cm ?prow ?columnindex )
-        (max-pos ?prow)
+        (MAX-POS ?prow)
         (card-at ?cnext ?nextrow ?columnindex)
-        (next ?nextrow ?prow)
+        (NEXT ?nextrow ?prow)
     )
 :effect
     (and
@@ -549,8 +549,8 @@ def stepwise():
         (next-moving-card ?cm)
         (card-at ?cm ?columnindex ?prow )
         (card-at ?cnext ?nextrow ?columnindex)
-        (next ?prerow ?prow)
-        (next ?prow ?nextrow)
+        (NEXT ?prerow ?prow)
+        (NEXT ?prow ?nextrow)
     )
 :effect
     (and
@@ -572,8 +572,8 @@ def stepwise():
         (not (robot-at-card ?cm))
         (next-moving-card ?cm)
         (card-at ?cm ?prow ?columnindex )
-        (next ?prerow ?prow)
-        (min-pos ?min)
+        (NEXT ?prerow ?prow)
+        (MIN-POS ?min)
         (= ?prow ?min)
         (new-headtail-card ?newtc)
     )

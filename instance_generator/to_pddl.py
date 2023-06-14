@@ -18,13 +18,13 @@ def labyrinth_to_pddl(labyrinth: Labyrinth, id) -> str:
     
     s += "(:init\n"
     
-    s += "\t(max-pos pos" + str(labyrinth.board.width-1) + ")\n"
-    s += "\t(min-pos pos0)\n"
+    s += "\t(MAX-POS pos" + str(labyrinth.board.width-1) + ")\n"
+    s += "\t(MIN-POS pos0)\n"
     
     s += "\n"
     
     for i in range(labyrinth.board.width - 1):
-        s += "\t(next pos" + str(i+1) + " pos" + str(i) + ")\n"
+        s += "\t(NEXT pos" + str(i+1) + " pos" + str(i) + ")\n"
         
     s += "\n"
     
@@ -37,7 +37,7 @@ def labyrinth_to_pddl(labyrinth: Labyrinth, id) -> str:
         for x in range(labyrinth.board.width):
             for direction in list(Direction):
                 if not labyrinth.board.get_card(Position(x,y)).can_go(direction):
-                    s += "\t(blocked card" + str(labyrinth.board.get_card(Position(x,y)).id) + " " + direction.to_single_charater() + ")\n"
+                    s += "\t(BLOCKED card" + str(labyrinth.board.get_card(Position(x,y)).id) + " " + direction.to_single_charater() + ")\n"
             s += "\n"
     s += "\n"
     s += "\t(robot-at card0)\n\n"
