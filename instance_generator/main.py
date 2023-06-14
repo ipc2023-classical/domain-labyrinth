@@ -41,16 +41,23 @@ def run(size, num_rotations, seed, image_sol, image_init, pddl_file):
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(
-                    prog='Labyrinth instance generator',
-                    description='Generates a solvable instance and a upper bound \
-                    on the plan cost')
+                    prog=sys.argv[0],
+                    description='Labyrinth instance generator: Generates a' \
+                    ' solvable instance and a upper bound on the plan cost')
     
-    parser.add_argument('--size', dest='size', type= int, required=True)
-    parser.add_argument('--num-rotataions', dest='num_rotations', type=int, default=10)
-    parser.add_argument('--seed', dest='seed', type=int, default=0)
-    parser.add_argument('--image-sol', dest='image_sol')
-    parser.add_argument('--image-init', dest='image_init')
-    parser.add_argument('--pddl', dest='pddl', default='problem.pddl')
+    parser.add_argument('--size', dest='size', type= int, required=True,
+                        help='Size of the board')
+    parser.add_argument('--num-rotations', dest='num_rotations', type=int,
+                        required=True,
+                        help='number of rotations used to scramble the board')
+    parser.add_argument('--seed', dest='seed', type=int, default=0,
+                        help='seed for the random generator. default 0')
+    parser.add_argument('--image-sol', dest='image_sol',
+                        help='file where the svg image of the solution should be stored')
+    parser.add_argument('--image-init', dest='image_init',
+                        help='file where the svg image of the initial state should be stored')
+    parser.add_argument('--pddl', dest='pddl', required = True,
+                        help='file where the pddl problem definition will be stored')
     
     args = parser.parse_args()
     
