@@ -587,6 +587,16 @@ if __name__ == '__main__':
     if len(sys.argv) not in [2, 3]:
         print(f'Usage: {sys.argv[0]} htg max-grid-size', file = sys.stderr)
         print(f'       {sys.argv[0]} stepwise', file = sys.stderr)
+        print('''
+This script generates the domain PDDL file to stdout.
+There are two variants:
+ - stepwise: The rotation of cards is split into multiple actions that
+   rotate the whole row or column step-by-step.
+ - htg: The rotation of a row or column is done with a single action, but
+   these actions need to be pre-generated for each size of the grid. The
+   argument {max-grid-size} specifies what is the maximum size of the grid
+   supported by the generated domain.
+''', file = sys.stderr)
         sys.exit(-1)
     if sys.argv[1] == 'htg':
         sys.exit(htg(int(sys.argv[2])))
