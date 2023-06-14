@@ -1,4 +1,4 @@
-(define (domain moving-labyrinth)
+(define (domain labyrinth)
 (:requirements :typing :adl :equality :action-costs)
 (:types
     ;; card with 2 to 4 paths

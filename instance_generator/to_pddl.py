@@ -2,7 +2,7 @@ from board import *
 
 def labyrinth_to_pddl(labyrinth: Labyrinth, id) -> str:
     
-    s = "(define (problem " + id + ")\n(:domain moving-labyrinth)\n"
+    s = "(define (problem " + id + ")\n(:domain labyrinth)\n"
     
     s += "(:objects\n\t"
     

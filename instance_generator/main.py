@@ -33,7 +33,8 @@ def run(size, num_rotations, seed, image_sol, image_init, pddl_file):
         svg.save_svg(image_init)
     
     if pddl_file:
-        pddl = labyrinth_to_pddl(labyrinth, 'size-' + str(size) + '-rotations-' + str(num_rotations) + '-seed-' + str(seed))
+        name = f'labyrinth-size-{size}-rotations-{num_rotations}-seed-{seed}'
+        pddl = labyrinth_to_pddl(labyrinth, name)
         f = open(pddl_file, "w")
         f.write(pddl)
         f.close()
