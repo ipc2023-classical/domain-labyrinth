@@ -1,10 +1,7 @@
 (define (domain moving-labyrinth)
-(:requirements :typing :adl :equality)
+(:requirements :typing :adl :equality :action-costs)
 (:types
-    ;; card consisting of 4 sectors 
-    ;; NW | NE
-    ;;--------
-    ;; SW | SE
+    ;; card with 2 to 4 paths
     card - object
     direction - object
     ;; vertical direction: N S
@@ -15,6 +12,11 @@
     gridpos - object
 )
 
+(:constants 
+    S N - directionV
+	W E - directionH
+)
+
 (:predicates
     ;; ordering of values for grid positions ?p1 = ?p2 + 1
     (next ?p1 - gridpos ?p2 - gridpos)
@@ -22,12 +24,10 @@
     (max-pos ?p - gridpos)
     ;; minimal grid index
     (min-pos ?p - gridpos)
-    ;; moving on ?c from sector ?d1from ?d2from to sector ?d1to ?d2to is blocked
-    (blocked ?c - card ?d1from - directionV ?d2from - directionH ?d1to - directionV ?d2to - directionH)
+    ;; moving from ?c in direction ?d is blocked by a wall
+    (blocked ?c - card ?d - direction)
     ;; robot is located on card ?c
-    (robot-at-card ?c - card)
-    ;; robot is located in sector ?d1 ?d2
-    (robot-at-cell ?d1 - directionV ?d2 - directionH)
+    (robot-at ?c - card)
     ;; card ?c is positioned in the grid at ?p1 ?p2 
     (card-at ?c - card ?p1 - gridpos ?p2 - gridpos)
     ;; flag to indicate that a card is currently mowing an the robot cannot move
@@ -47,161 +47,102 @@
 
 (:functions
     (total-cost) - number
-    (between-cards-cost) - number
-    (inside-cards-cost) - number
+    (move-robot-cost) - number
     (move-card) - number
 )
 
-;; moves the robot between to cards: ?cfrom (NW) -> ?cto (NE) or ?cfrom (SW) -> ?cto (SE)
-(:action move-between-cards-west
-    :parameters ( ?cfrom - card ?p1from - gridpos ?p2from - gridpos ?d1from - directionV ?d2from - directionH ?cto - card ?p1to - gridpos ?p2to - gridpos ?d1to - directionV ?d2to - directionH)
+;; moves the robot between to cards
+(:action move-west
+    :parameters (?cfrom - card ?p1from - gridpos ?p2from - gridpos ?dfrom - directionH ?cto - card ?p1to - gridpos ?p2to - gridpos ?dto - directionH)
     :precondition
         (and
             (not (cards-mowing))
-            (= ?d2from w)
-            (robot-at-card ?cfrom)
-            (robot-at-cell ?d1from ?d2from)
+            (= ?dfrom w)
+            (robot-at ?cfrom)
             (card-at ?cfrom ?p1from ?p2from)
             (card-at ?cto ?p1to ?p2to)
             (next ?p2from ?p2to)
             (= ?p1from ?p1to)
-            (= ?d1from ?d1to)
-            (not (= ?d2from ?d2to))
-            (not (= ?d1to ?d2to))
+            (not (= ?dfrom ?dto))
+            (not (blocked ?cfrom ?dfrom))
+            (not (blocked ?cto ?dto))
         )
     :effect
         (and
-            (not (robot-at-card ?cfrom))
-            (not (robot-at-cell?d1from ?d2from))
-            (robot-at-card ?cto)
-            (robot-at-cell ?d1to ?d2to)
-            (increase (total-cost) (between-cards-cost))
+            (not (robot-at ?cfrom))
+            (robot-at ?cto)
+            (increase (total-cost) (move-robot-cost))
         )
 )
 
-;; moves the robot between to cards: ?cfrom (NE) -> ?cto (NW) or ?cfrom (SE) -> ?cto (SW)
-(:action move-between-cards-est
-    :parameters ( ?cfrom - card ?p1from - gridpos ?p2from - gridpos ?d1from - directionV ?d2from - directionH ?cto - card ?p1to - gridpos ?p2to - gridpos ?d1to - directionV ?d2to - directionH)
+(:action move-east
+    :parameters (?cfrom - card ?p1from - gridpos ?p2from - gridpos ?dfrom - directionH ?cto - card ?p1to - gridpos ?p2to - gridpos ?dto - directionH)
     :precondition
         (and
             (not (cards-mowing))
-            (= ?d2from e)
-            (robot-at-card ?cfrom)
-            (robot-at-cell ?d1from ?d2from)
+            (= ?dfrom e)
+            (robot-at ?cfrom)
             (card-at ?cfrom ?p1from ?p2from)
             (card-at ?cto ?p1to ?p2to)
             (next ?p2to ?p2from)
             (= ?p1from ?p1to)
-            (= ?d1from ?d1to)
-            (not (= ?d2from ?d2to))
-            (not (= ?d1to ?d2to))
+            (not (= ?dfrom ?dto))
+            (not (blocked ?cfrom ?dfrom))
+            (not (blocked ?cto ?dto))
         )
     :effect
         (and
-            (not (robot-at-card ?cfrom))
-            (not (robot-at-cell?d1from ?d2from))
-            (robot-at-card ?cto)
-            (robot-at-cell ?d1to ?d2to)
-            (increase (total-cost) (between-cards-cost))
+            (not (robot-at ?cfrom))
+            (robot-at ?cto)
+            (increase (total-cost) (move-robot-cost))
         )
 )
 
-;; moves the robot between to cards: ?cfrom (NW) -> ?cto (SW) or ?cfrom (NE) -> ?cto (SE)
-(:action move-between-cards-north
-    :parameters ( ?cfrom - card ?p1from - gridpos ?p2from - gridpos ?d1from - directionV ?d2from - directionH ?cto - card ?p1to - gridpos ?p2to - gridpos ?d1to - directionV ?d2to - directionH)
+(:action move-north
+    :parameters (?cfrom - card ?p1from - gridpos ?p2from - gridpos ?dfrom - directionV ?cto - card ?p1to - gridpos ?p2to - gridpos ?dto - directionV)
     :precondition
         (and
             (not (cards-mowing))
-            (= ?d1from n)
-            (robot-at-card ?cfrom)
-            (robot-at-cell ?d1from ?d2from)
+            (= ?dfrom n)
+            (robot-at ?cfrom)
             (card-at ?cfrom ?p1from ?p2from)
             (card-at ?cto ?p1to ?p2to)
             (next ?p1from ?p1to)
             (= ?p2from ?p2to)
-            (= ?d2from ?d2to)
-            (not (= ?d1from ?d1to))
-            (not (= ?d1to ?d2to))
+            (not (= ?dfrom ?dto))
+            (not (blocked ?cfrom ?dfrom))
+            (not (blocked ?cto ?dto))
         )
     :effect
         (and
-            (not (robot-at-card ?cfrom))
-            (not (robot-at-cell?d1from ?d2from))
-            (robot-at-card ?cto)
-            (robot-at-cell ?d1to ?d2to)
-            (increase (total-cost) (between-cards-cost))
+            (not (robot-at ?cfrom))
+            (robot-at ?cto)
+            (increase (total-cost) (move-robot-cost))
         )
 )
 
-;; moves the robot between to cards: ?cfrom (SW) -> ?cto (NW) or ?cfrom (SE) -> ?cto (NE)
-(:action move-between-cards-south
-    :parameters ( ?cfrom - card ?p1from - gridpos ?p2from - gridpos ?d1from - directionV ?d2from - directionH ?cto - card ?p1to - gridpos ?p2to - gridpos ?d1to - directionV ?d2to - directionH)
+(:action move-south
+    :parameters (?cfrom - card ?p1from - gridpos ?p2from - gridpos ?dfrom - directionV ?cto - card ?p1to - gridpos ?p2to - gridpos ?dto - directionV)
     :precondition
         (and
             (not (cards-mowing))
-            (= ?d1from s)
-            (robot-at-card ?cfrom)
-            (robot-at-cell ?d1from ?d2from)
+            (= ?dfrom s)
+            (robot-at ?cfrom)
             (card-at ?cfrom ?p1from ?p2from)
             (card-at ?cto ?p1to ?p2to)
             (next ?p1to ?p1from)
             (= ?p2from ?p2to)
-            (= ?d2from ?d2to)
-            (not (= ?d1from ?d1to))
-            (not (= ?d1to ?d2to))
+            (not (= ?dfrom ?dto))
+            (not (blocked ?cfrom ?dfrom))
+            (not (blocked ?cto ?dto))
         )
     :effect
         (and
-            (not (robot-at-card ?cfrom))
-            (not (robot-at-cell?d1from ?d2from))
-            (robot-at-card ?cto)
-            (robot-at-cell ?d1to ?d2to)
-            (increase (total-cost) (between-cards-cost))
+            (not (robot-at ?cfrom))
+            (robot-at ?cto)
+            (increase (total-cost) (move-robot-cost))
         )
 )
-
-;; moves the robot horizontally within a card 
-;; this is only possible if there is no wall between the sectors (blocked)
-(:action move-inside-cards-h
-    :parameters ( ?c - card ?d1from - directionV ?d2from - directionH ?d1to - directionV ?d2to - directionH)
-    :precondition
-        (and
-            (not (cards-mowing))
-            (robot-at-card ?c)
-            (robot-at-cell ?d1from ?d2from)
-            (= ?d1from ?d1to)
-            (not (= ?d1to ?d2to))
-            (not (blocked ?c ?d1from ?d2from ?d1to ?d2to))
-        )
-    :effect
-        (and
-            (not (robot-at-cell ?d1from ?d2from))
-            (robot-at-cell ?d1to ?d2to)
-            (increase (total-cost) (inside-cards-cost))
-        )
-)
-
-;; moves the robot vertically within a card 
-;; this is only possible if there is no wall between the sectors (blocked)
-(:action move-inside-cards-v
-    :parameters ( ?c - card ?d1from - directionV ?d2from - directionH ?d1to - directionV ?d2to - directionH)
-    :precondition
-        (and
-            (not (cards-mowing))
-            (robot-at-card ?c)
-            (robot-at-cell ?d1from ?d2from)
-            (= ?d2from ?d2to)
-            (not (= ?d1to ?d2to))
-            (not (blocked ?c ?d1from ?d2from ?d1to ?d2to))
-        )
-    :effect
-        (and
-            (not (robot-at-cell ?d1from ?d2from))
-            (robot-at-cell ?d1to ?d2to)
-            (increase (total-cost) (inside-cards-cost))
-        )
-)
-
 
 ;; there 3 (start, move, stop) for each direction to rotate the cards
 ;; rotating ends in a deadend if the card with the robot in the row/column that is rotated
@@ -217,7 +158,7 @@
     (and
         (not (cards-mowing))
         (not (cards-mowing-west))
-        (not (robot-at-card ?cm))
+        (not (robot-at ?cm))
         (card-at ?cm ?rowindex ?pcolumn )
         (min-pos ?pcolumn)
         (card-at ?cnext ?rowindex ?nextcolumn)
@@ -241,7 +182,7 @@
     (and
         (cards-mowing)
         (cards-mowing-west)
-        (not (robot-at-card ?cm))
+        (not (robot-at ?cm))
         (next-mowing-card ?cm)
         (card-at ?cm ?rowindex ?pcolumn )
         (card-at ?cnext ?rowindex ?nextcolumn)
@@ -267,7 +208,7 @@
     (and
         (cards-mowing)
         (cards-mowing-west)
-        (not (robot-at-card ?cm))
+        (not (robot-at ?cm))
         (next-mowing-card ?cm)
         (card-at ?cm ?rowindex ?pcolumn )
         (next ?pcolumn ?prevcolumn)
@@ -296,7 +237,7 @@
     (and
         (not (cards-mowing))
         (not (cards-mowing-east))
-        (not (robot-at-card ?cm))
+        (not (robot-at ?cm))
         (card-at ?cm ?rowindex ?pcolumn )
         (max-pos ?pcolumn)
         (card-at ?cnext ?rowindex ?nextcolumn)
@@ -319,7 +260,7 @@
     (and
         (cards-mowing)
         (cards-mowing-east)
-        (not (robot-at-card ?cm))
+        (not (robot-at ?cm))
         (next-mowing-card ?cm)
         (card-at ?cm ?rowindex ?pcolumn )
         (card-at ?cnext ?rowindex ?nextcolumn)
@@ -343,7 +284,7 @@
     (and
         (cards-mowing)
         (cards-mowing-east)
-        (not (robot-at-card ?cm))
+        (not (robot-at ?cm))
         (next-mowing-card ?cm)
         (card-at ?cm ?rowindex ?pcolumn )
         (next  ?prevcolumn ?pcolumn)
@@ -371,7 +312,7 @@
     (and
         (not (cards-mowing))
         (not (cards-mowing-north))
-        (not (robot-at-card ?cm))
+        (not (robot-at ?cm))
         (card-at ?cm ?prow ?columnindex )
         (min-pos ?prow)
         (card-at ?cnext ?nextrow ?columnindex)
@@ -394,7 +335,7 @@
     (and
         (cards-mowing)
         (cards-mowing-north)
-        (not (robot-at-card ?cm))
+        (not (robot-at ?cm))
         (next-mowing-card ?cm)
         (card-at ?cm ?columnindex ?prow )
         (card-at ?cnext ?nextrow ?columnindex)
@@ -418,7 +359,7 @@
     (and
         (cards-mowing)
         (cards-mowing-north)
-        (not (robot-at-card ?cm))
+        (not (robot-at ?cm))
         (next-mowing-card ?cm)
         (card-at ?cm ?prow ?columnindex )
         (next ?prow ?prerow)
@@ -446,7 +387,7 @@
     (and
         (not (cards-mowing))
         (not (cards-mowing-south))
-        (not (robot-at-card ?cm))
+        (not (robot-at ?cm))
         (card-at ?cm ?prow ?columnindex )
         (max-pos ?prow)
         (card-at ?cnext ?nextrow ?columnindex)
@@ -469,7 +410,7 @@
     (and
         (cards-mowing)
         (cards-mowing-south)
-        (not (robot-at-card ?cm))
+        (not (robot-at ?cm))
         (next-mowing-card ?cm)
         (card-at ?cm ?columnindex ?prow )
         (card-at ?cnext ?nextrow ?columnindex)
@@ -493,7 +434,7 @@
     (and
         (cards-mowing)
         (cards-mowing-south)
-        (not (robot-at-card ?cm))
+        (not (robot-at ?cm))
         (next-mowing-card ?cm)
         (card-at ?cm ?prow ?columnindex )
         (next ?prerow ?prow)
@@ -523,11 +464,11 @@
 :precondition
     (and
         (not (cards-mowing))
-        (robot-at-card ?c)
-        (robot-at-cell s e)
+        (robot-at ?c)
         (card-at ?c ?prow ?pcolumn)
         (max-pos ?prow)
         (max-pos ?pcolumn)
+        (not (blocked ?c s ))
     )
 :effect
     (and

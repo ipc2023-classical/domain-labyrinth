@@ -17,50 +17,46 @@
     (card-at card1 pos0 pos0)
     (card-at card2 pos0 pos1)
     (card-at card3 pos0 pos2)
-    (card-at card4 pos1 pos0)
-    (card-at card5 pos1 pos1)
-    (card-at card6 pos1 pos2)
+    
+    (card-at card5 pos1 pos0)
+    (card-at card6 pos1 pos1)
+    (card-at card4 pos1 pos2)
+    
     (card-at card7 pos2 pos0)
     (card-at card8 pos2 pos1)
     (card-at card9 pos2 pos2)
     
     
-    (blocked card1 N W S W)
-    (blocked card1 S W N W)
-    (blocked card1 N E S E)
-    (blocked card1 S E N E)
+    (blocked card1 N)
+    (blocked card1 E)
+    (blocked card1 W)
     
-    (blocked card2 N W S W)
-    (blocked card2 S W N W)
-    (blocked card2 N E S E)
-    (blocked card2 S E N E)
-    (blocked card2 S W S E)
-    (blocked card2 S E S W)
+    (blocked card2 S)
+    (blocked card2 W)
+
+    (blocked card3 N)
+    (blocked card3 S)
+
+    (blocked card4 S)
+    (blocked card4 W)
+
+    (blocked card5 N)
+    (blocked card5 S)
+
+    (blocked card6 N)
+    (blocked card6 E)
+
+    (blocked card8 E)
+    (blocked card8 W)
+
+    (blocked card9 E)
+    (blocked card9 W)
     
-    (blocked card4 N W N E)
-    (blocked card4 N E N W)
-    (blocked card4 N E S E)
-    (blocked card4 S E N E)
     
-    
-    (blocked card5 N W S W)
-    (blocked card5 S W N W)
-    (blocked card5 N W N E)
-    (blocked card5 N E N W)
-    (blocked card5 N E S E)
-    (blocked card5 S E N E)
-    
-    (blocked card6 N W S W)
-    (blocked card6 S W N W)
-    (blocked card6 N E S E)
-    (blocked card6 S E N E)
-    
-    (robot-at-card card1)
-    (robot-at-cell N W)
+    (robot-at card1)
 
     (= (total-cost) 0)
-    (= (between-cards-cost) 2)
-    (= (inside-cards-cost) 1)
+    (= (move-robot-cost) 2)
     (= (move-card) 1)
 )
 (:goal
