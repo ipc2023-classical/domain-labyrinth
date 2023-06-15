@@ -30,7 +30,7 @@ def labyrinth_to_pddl(labyrinth: Labyrinth, id) -> str:
     
     for y in range(labyrinth.board.height):
         for x in range(labyrinth.board.width):
-            s += "\t(card-at card" + str(labyrinth.board.get_card(Position(x,y)).id) + " pos" + str(y) + " pos" + str(x) + ")\n"
+            s += "\t(card-at card" + str(labyrinth.board.get_card(Position(x,y)).id) + " pos" + str(x) + " pos" + str(y) + ")\n"
 
     s += "\n"
     for y in range(labyrinth.board.height):

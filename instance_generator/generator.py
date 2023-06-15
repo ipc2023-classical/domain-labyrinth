@@ -1,4 +1,5 @@
 import random
+import copy
 from labyrinth import Labyrinth, Position, Direction
 
 def generate_random_labyrinth(width: int, height: int, seed: int):
@@ -86,14 +87,17 @@ def generate_random_labyrinth(width: int, height: int, seed: int):
     return labyrinth, trace, pos_sequence
 
 def mix_up_labyrinth(labyrinth: Labyrinth, num_shifts: int):
-    
-    old_labyrinth = labyrinth
+    old_labyrinth = copy.deepcopy(labyrinth)
     not_solvable_without_shifts_found = False;
     rotations = []
-    for num in range(num_shifts):
-        
+    prev_direction = None
+    prev_index = None
+    while len(rotations) < num_shifts:
         direction = list(Direction)[random.randint(0, 3)]
         index = random.randint(1, labyrinth.board.width - 2)
+        
+        if direction.opposite() == prev_direction and index == prev_index:
+            continue
         
         labyrinth.shift_rotate(index,direction)
         
@@ -102,11 +106,13 @@ def mix_up_labyrinth(labyrinth: Labyrinth, num_shifts: int):
             shortest_pos_sequence = labyrinth.shortest_trace()
         except Exception:
             not_solvable_without_shifts_found = True
-            old_labyrinth = labyrinth
+            old_labyrinth = copy.deepcopy(labyrinth)
             rotations.append([direction, index])
+            prev_direction = direction
+            prev_index = index
             continue
         
-        labyrinth = old_labyrinth
+        labyrinth = copy.deepcopy(old_labyrinth)
     
     if not not_solvable_without_shifts_found:
         raise Exception('Not enough rotations to make labyrith unsolvable without rotattions!')

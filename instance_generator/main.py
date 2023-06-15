@@ -2,6 +2,7 @@
 
 import sys
 import argparse
+import copy
 
 from generator import generate_random_labyrinth, mix_up_labyrinth
 from to_pddl import labyrinth_to_pddl
@@ -24,13 +25,16 @@ def run(size, num_rotations, seed, image_sol, image_init, plan_file, pddl_file):
         svg.save_svg(image_sol)
     
     # add random shifts
-    labyrinth, rotations = mix_up_labyrinth(labyrinth, num_rotations)
-    print('#shifts: ' + str(len(rotations)))
+    rotations = []
+    if num_rotations > 0:
+        labyrinth, rotations = mix_up_labyrinth(labyrinth, num_rotations)
+        print('#rotations: ' + str(len(rotations)))
     
     print('plan length estimate: ' + str(len(shortest_pos_sequence) - 1 + len(rotations)))
     
     if plan_file:
-        plan = to_plan(labyrinth, shortest_pos_sequence, rotations)
+        copy_labyrinth = copy.deepcopy(labyrinth)
+        plan = to_plan(copy_labyrinth, shortest_pos_sequence, rotations)
         f = open(plan_file, "w")
         f.write(plan)
         f.close()
