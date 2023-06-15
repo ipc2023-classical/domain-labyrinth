@@ -4,9 +4,8 @@ This domain is inspired by the Ravensburger
 [Labyrinth](<https://en.wikipedia.org/wiki/Labyrinth_(board_game)>) board game.
 The goal is to guide a robot through a dynamically changing labyrinth.
 The labyrinth consists of N times N cards forming a square board and each
-card consists of four corner sectors that may or may not have a horizontal
-or verical wall put between them. The robot can freely between adjecent 
-cards as long as it does not cross a wall. 
+card consists of four roads that may or may not be blocked by a wall. The robot
+can move freely between adjecent cards as long as it does not cross a wall.
 The labyrinth can be changed by pushing a row or column of cards so that the
 card pushed out of the board is put back at the other side of the board.
 In the process, the cards retain their orientation.
@@ -21,7 +20,7 @@ Example of a labyrinth (in its initial state):
 
 ![Initial State](init.png)
 
-Possible plan:
+and a possible solution:
 
 ![Possible Plan](sol.png)
 
