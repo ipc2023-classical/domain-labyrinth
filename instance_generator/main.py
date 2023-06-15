@@ -30,7 +30,7 @@ def run(size, num_rotations, seed, image_sol, image_init, plan_file, pddl_file):
         labyrinth, rotations = mix_up_labyrinth(labyrinth, num_rotations)
         print('#rotations: ' + str(len(rotations)))
     
-    print('plan length estimate: ' + str(len(shortest_pos_sequence) - 1 + len(rotations)))
+    print('plan cost estimate: ' + str(len(shortest_pos_sequence) - 1 + len(rotations)))
     
     if plan_file:
         copy_labyrinth = copy.deepcopy(labyrinth)
