@@ -1,6 +1,5 @@
 import random
-from board import Labyrinth, Board, Card, Position
-from utils import Direction
+from labyrinth import Labyrinth, Position, Direction
 
 def generate_random_labyrinth(width: int, height: int, seed: int):
     
@@ -90,6 +89,7 @@ def mix_up_labyrinth(labyrinth: Labyrinth, num_shifts: int):
     
     old_labyrinth = labyrinth
     not_solvable_without_shifts_found = False;
+    rotations = []
     for num in range(num_shifts):
         
         direction = list(Direction)[random.randint(0, 3)]
@@ -103,6 +103,7 @@ def mix_up_labyrinth(labyrinth: Labyrinth, num_shifts: int):
         except Exception:
             not_solvable_without_shifts_found = True
             old_labyrinth = labyrinth
+            rotations.append([direction, index])
             continue
         
         labyrinth = old_labyrinth
@@ -110,7 +111,7 @@ def mix_up_labyrinth(labyrinth: Labyrinth, num_shifts: int):
     if not not_solvable_without_shifts_found:
         raise Exception('Not enough rotations to make labyrith unsolvable without rotattions!')
     
-    return old_labyrinth
+    return old_labyrinth, rotations
         
             
         

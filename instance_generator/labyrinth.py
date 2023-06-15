@@ -1,8 +1,28 @@
 from enum import Enum
-from utils import Direction
 import drawsvg as draw
 import networkx as nx
-import matplotlib.pyplot as plt
+
+class Direction(Enum):
+    NORTH = 'NORTH', 
+    EAST = 'EAST', 
+    SOUTH = 'SOUTH', 
+    WEST = 'WEST'
+    
+    def __repr__(self) -> str:
+        return str(self.name)
+    
+    def opposite(self):
+        if self == Direction.NORTH:
+            return Direction.SOUTH
+        if self == Direction.SOUTH:
+            return Direction.NORTH
+        if self == Direction.EAST:
+            return Direction.WEST
+        if self == Direction.WEST:
+            return Direction.EAST
+    
+    def to_single_charater(self) -> str:
+        return self.name[0]
 
 class Card:
     
@@ -228,14 +248,14 @@ class Labyrinth:
                 d.append(draw.Text(str(card.id), 4, 
                                    x=self.p/2 + 5/6 * self.cs + self.csp * x, 
                                    y=self.p/2 + self.cs + self.csp * y,
-                                   stroke='white', stroke_width=0.5))
+                                   fill='white', stroke='white', stroke_width=0.25))
 
             #pos of rover
             d.append(draw.Circle(self.p/2 + self.csp/2 + self.csp * self.pos.x, 
                                  self.p/2 + self.csp/2 + self.csp * self.pos.y, self.csp/8, fill='blue'))
             # goal position
             d.append(draw.Rectangle(self.p + self.leave_pos.x * self.csp + 1/3 * self.cs, 
-                                    self.p + self.leave_pos.y * self.csp + 1/3 * self.cs, 
+                                    self.p + self.leave_pos.y * self.csp + 2/3 * self.cs, 
                                     self.cs/3, self.cs/3, 
                                     fill='yellow', stroke='none'))
                 

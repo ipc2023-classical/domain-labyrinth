@@ -5,8 +5,9 @@ import argparse
 
 from generator import generate_random_labyrinth, mix_up_labyrinth
 from to_pddl import labyrinth_to_pddl
+from plan import to_plan
 
-def run(size, num_rotations, seed, image_sol, image_init, pddl_file):
+def run(size, num_rotations, seed, image_sol, image_init, plan_file, pddl_file):
     # generate layrith solvable without shifts
     labyrinth, gen_trace, gen_pos_sequence = generate_random_labyrinth(size, size, seed)
 
@@ -23,10 +24,16 @@ def run(size, num_rotations, seed, image_sol, image_init, pddl_file):
         svg.save_svg(image_sol)
     
     # add random shifts
-    print('#shifts: ' + str(num_rotations))
-    labyrinth = mix_up_labyrinth(labyrinth, num_rotations)
+    labyrinth, rotations = mix_up_labyrinth(labyrinth, num_rotations)
+    print('#shifts: ' + str(len(rotations)))
     
-    print('plan length estimate: ' + str(len(shortest_pos_sequence) - 1 + num_rotations))
+    print('plan length estimate: ' + str(len(shortest_pos_sequence) - 1 + len(rotations)))
+    
+    if plan_file:
+        plan = to_plan(labyrinth, shortest_pos_sequence, rotations)
+        f = open(plan_file, "w")
+        f.write(plan)
+        f.close()
     
     if image_init:
         svg = labyrinth.to_svg()
@@ -57,9 +64,11 @@ if __name__ == '__main__':
                         help='file where the svg image of the solution should be stored')
     parser.add_argument('--image-init', dest='image_init',
                         help='file where the svg image of the initial state should be stored')
+    parser.add_argument('--plan', dest='plan',
+                        help='file where the pan should be stored')
     parser.add_argument('--pddl', dest='pddl', required = True,
                         help='file where the pddl problem definition will be stored')
     
     args = parser.parse_args()
     
-    run(args.size, args.num_rotations, args.seed, args.image_sol, args.image_init, args.pddl)
+    run(args.size, args.num_rotations, args.seed, args.image_sol, args.image_init, args.plan, args.pddl)

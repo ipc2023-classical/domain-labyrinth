@@ -1,4 +1,4 @@
-from board import *
+from labyrinth import *
 
 def labyrinth_to_pddl(labyrinth: Labyrinth, id) -> str:
     
