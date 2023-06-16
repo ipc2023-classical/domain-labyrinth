@@ -1,84 +1,3 @@
-#!/usr/bin/env python3
-
-import sys
-
-def moveCardAction(direction, grid_size):
-    if direction == 'north':
-        fixcoord = 'p2'
-        freecoord = 'p1'
-    elif direction == 'south':
-        fixcoord = 'p2'
-        freecoord = 'p1'
-    elif direction == 'east':
-        fixcoord = 'p1'
-        freecoord = 'p2'
-    elif direction == 'west':
-        fixcoord = 'p1'
-        freecoord = 'p2'
-
-    params = [f'?{fixcoord} - gridpos']
-    for i in range(1, grid_size + 1):
-        params += [f'?card{i} - card']
-        params += [f'?card{i}-{freecoord} - gridpos']
-
-    prevail = []
-    prevail += [f'(MIN-POS ?card1-{freecoord})']
-    prevail += [f'(MAX-POS ?card{grid_size}-{freecoord})']
-    for i in range(1, grid_size):
-        prevail += [f'(NEXT ?card{i + 1}-{freecoord} ?card{i}-{freecoord})']
-
-    for i in range(1, grid_size + 1):
-        prevail += [f'(not (robot-at ?card{i}))']
-
-    pre = []
-    for i in range(1, grid_size + 1):
-        if fixcoord == 'p1':
-            pos = f'?p1 ?card{i}-p2'
-        else:
-            pos = f'?card{i}-p1 ?p2'
-        pre += [f'(card-at ?card{i} {pos})']
-
-    eff = [f'(not {x})' for x in pre]
-    for i in range(1, grid_size + 1):
-        if direction in ['south', 'east']:
-            n = i + 1
-        else:
-            n = i - 1
-        if n > grid_size:
-            n = 1
-        elif n < 1:
-            n = grid_size
-
-        if fixcoord == 'p1':
-            pos = f'?p1 ?card{n}-p2'
-        else:
-            pos = f'?card{n}-p1 ?p2'
-        eff += [f'(card-at ?card{i} {pos})']
-
-
-
-    params = ' '.join(params)
-    pre = '\n            '.join(prevail + pre)
-    eff = '\n            '.join(eff)
-
-    s = f'''
-(:action move-card-{direction}-{grid_size}
-    :parameters ({params})
-    :precondition
-        (and
-            {pre}
-        )
-    :effect
-        (and
-            {eff}
-            (increase (total-cost) (move-card))
-        )
-)
-'''
-    return s
-
-def genDomain(additional_predicates, move_cards):
-    s = f'''
 (define (domain labyrinth)
 (:requirements :adl :action-costs)
 
@@ -117,7 +36,16 @@ def genDomain(additional_predicates, move_cards):
 
     ;; flag to indicate that a card is currently moving an the robot cannot move
     (cards-moving)
-    {additional_predicates}
+    ;; flags to indicate that a row/column is rotating in the corresponding direction
+    (cards-moving-west)
+    (cards-moving-east)
+    (cards-moving-south)
+    (cards-moving-north)
+    ;; the card whose position needs to be updated next while rotating
+    (next-moving-card ?c - card)
+    ;; the card that was removed to rotate and which needs to be placed at the beginning/end of the row/column
+    (new-headtail-card ?c - card)
+
 )
 
 (:functions
@@ -219,56 +147,7 @@ def genDomain(additional_predicates, move_cards):
         )
 )
 
-{move_cards}
 
-;; checks whether the robot can leave the labyrinth i.e
-;; whether the card the robot is currently on is in the bottom right corner
-;; and the rover is in sector SE
-(:action leave
-:parameters(?c - card ?prow - gridpos ?pcolumn - gridpos)
-:precondition
-    (and
-        (not (cards-moving))
-        (robot-at ?c)
-        (card-at ?c ?prow ?pcolumn)
-        (max-pos ?prow)
-        (max-pos ?pcolumn)
-        (not (blocked ?c s ))
-    )
-:effect
-    (and
-        (left)
-    )
-)
-)
-'''
-    return s
-
-def htg(max_grid_size):
-    actions = []
-    for grid_size in range(2, max_grid_size + 1):
-        for direction in ['north', 'south', 'east', 'west']:
-            actions += [moveCardAction(direction, grid_size)]
-
-    actions = '\n\n'.join(actions)
-    s = genDomain('', actions)
-    print(s)
-    return 0
-
-def stepwise():
-    predicates = '''
-    ;; flags to indicate that a row/column is rotating in the corresponding direction
-    (cards-moving-west)
-    (cards-moving-east)
-    (cards-moving-south)
-    (cards-moving-north)
-    ;; the card whose position needs to be updated next while rotating
-    (next-moving-card ?c - card)
-    ;; the card that was removed to rotate and which needs to be placed at the beginning/end of the row/column
-    (new-headtail-card ?c - card)
-'''
-
-    actions = '''
 ;; there 3 (start, move, stop) for each direction to rotate the cards
 ;; rotating ends in a deadend if the card with the robot in the row/column that is rotated
 ;; ----------------------------------------------------------------------------------------
@@ -574,30 +453,26 @@ def stepwise():
         (not (next-moving-card ?cm))
     )
 )
-'''
-    s = genDomain(predicates, actions)
-    print(s)
-    return 0
 
-if __name__ == '__main__':
-    if len(sys.argv) not in [2, 3]:
-        print(f'Usage: {sys.argv[0]} htg max-grid-size', file = sys.stderr)
-        print(f'       {sys.argv[0]} stepwise', file = sys.stderr)
-        print('''
-This script generates the domain PDDL file to stdout.
-There are two variants:
- - stepwise: The rotation of cards is split into multiple actions that
-   rotate the whole row or column step-by-step.
- - htg: The rotation of a row or column is done with a single action, but
-   these actions need to be pre-generated for each size of the grid. The
-   argument {max-grid-size} specifies what is the maximum size of the grid
-   supported by the generated domain.
-''', file = sys.stderr)
-        sys.exit(-1)
-    if sys.argv[1] == 'htg':
-        sys.exit(htg(int(sys.argv[2])))
-    elif sys.argv[1] == 'stepwise':
-        sys.exit(stepwise())
-    else:
-        print(f'Error: Unkown command {sys.argv[1]}', file = sys.stderr)
-        sys.exit(-1)
+
+;; checks whether the robot can leave the labyrinth i.e
+;; whether the card the robot is currently on is in the bottom right corner
+;; and the rover is in sector SE
+(:action leave
+:parameters(?c - card ?prow - gridpos ?pcolumn - gridpos)
+:precondition
+    (and
+        (not (cards-moving))
+        (robot-at ?c)
+        (card-at ?c ?prow ?pcolumn)
+        (max-pos ?prow)
+        (max-pos ?pcolumn)
+        (not (blocked ?c s ))
+    )
+:effect
+    (and
+        (left)
+    )
+)
+)
+
